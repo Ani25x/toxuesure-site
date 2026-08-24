@@ -55,7 +55,7 @@
 
     // Everything below the fold: rise-and-fade in on scroll, grouped
     // so a run of siblings reads as one gesture rather than four events.
-    var groups = [".figs", ".steps", ".stack", ".tags"];
+    var groups = [".figs", ".steps", ".stack", ".tags", ".stages"];
     groups.forEach(function (sel) {
       document.querySelectorAll(sel).forEach(function (group) {
         gsap.fromTo(
@@ -117,6 +117,28 @@
         }
       );
     });
+
+    // Growth-loop diagram: the connecting path draws itself in as the
+    // section scrolls past, node by node, rather than firing once.
+    var loopPath = document.querySelector(".loop-path");
+    if (loopPath) {
+      var loopLen = loopPath.getTotalLength();
+      loopPath.style.strokeDasharray = loopLen;
+      gsap.fromTo(
+        loopPath,
+        { strokeDashoffset: loopLen },
+        {
+          strokeDashoffset: 0,
+          ease: "none",
+          scrollTrigger: {
+            trigger: "#loop",
+            start: "top 70%",
+            end: "bottom 60%",
+            scrub: 0.6
+          }
+        }
+      );
+    }
   }
 
   /* ── cursor dot ───────────────────────────────────────────

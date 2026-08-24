@@ -11,6 +11,7 @@
   --ink:#111111;
   --soft:#6F6B63;
   --rule:#DDDAD3;
+  --accent:#E2661F;
   --display:Grotesk,-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
   --text:Archivo,-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
   --pad:clamp(22px,6vw,120px);
@@ -123,6 +124,22 @@ p:last-child{margin-bottom:0}
 .note{margin-top:clamp(38px,5vw,56px);padding:clamp(20px,3vw,28px);border:1px solid var(--rule);border-radius:2px;max-width:66ch}
 .note p{font-size:15.5px;color:var(--soft)}
 .note strong{color:var(--ink);font-weight:600}
+
+/* ─── loop ─────────────────────────────────────────────── */
+#loop .lede{color:var(--soft);align-self:end}
+.loop-diagram{margin:clamp(40px,6vw,64px) auto 0;max-width:640px}
+.loop-diagram svg{display:block;width:100%;height:auto;overflow:visible}
+.loop-path{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round}
+.loop-node circle{fill:var(--ground);stroke:var(--ink);stroke-width:1.25}
+.loop-node text{
+  font-family:var(--display);font-weight:700;font-size:26px;
+  fill:var(--ink);text-anchor:middle;dominant-baseline:central;
+}
+
+.stages{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:clamp(24px,3vw,34px);margin-top:clamp(40px,6vw,60px)}
+.stage{display:flex;gap:12px;align-items:baseline}
+.stage .idx{font-family:var(--display);font-size:12.5px;font-weight:500;color:var(--accent)}
+.stage p{color:var(--soft);max-width:38ch}
 
 /* ─── contact ──────────────────────────────────────────── */
 .contact .big{
