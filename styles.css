@@ -192,9 +192,13 @@ p:last-child{margin-bottom:0}
 .hero-graphic canvas,.work-graphic canvas,.services-graphic canvas,
 .approach-graphic canvas,.contact-graphic canvas{
   display:block;position:absolute;
-  top:calc(-1 * var(--bt));right:calc(-1 * var(--br));
-  bottom:calc(-1 * var(--bb));left:calc(-1 * var(--bl));
-  width:auto;height:auto;
+  /* <canvas> is a REPLACED element: with width/height:auto an absolutely
+     positioned one resolves to its 300x150 intrinsic size and ignores the
+     insets entirely, so every sketch was drawing into a fixed 300x150 box
+     adrift in a much larger container. Size it explicitly instead. */
+  top:calc(-1 * var(--bt));left:calc(-1 * var(--bl));
+  width:calc(100% + var(--bl) + var(--br));
+  height:calc(100% + var(--bt) + var(--bb));
   opacity:0;transition:opacity .6s var(--ease);
   -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
   -webkit-mask-image:radial-gradient(ellipse closest-side at 50% 50%,#000 var(--core,70%),transparent 100%);
@@ -202,10 +206,10 @@ p:last-child{margin-bottom:0}
 }
 canvas[data-graphic].ready{opacity:1}
 
-canvas[data-graphic="filament"]    {--core:66%}
+canvas[data-graphic="stack"]       {--core:82%}
 canvas[data-graphic="harmonograph"]{--core:70%}
 canvas[data-graphic="isopleth"]    {--core:84%}
-canvas[data-graphic="chladni"]     {--core:72%}
+canvas[data-graphic="fork"]        {--core:84%}
 canvas[data-graphic="development"] {--core:74%}
 
 .hero-graphic{

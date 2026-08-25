@@ -474,102 +474,146 @@
     // multiple instances never share memory. dt is real elapsed seconds
     // since the previous call (already clamped by the caller).
     var sketches = {
-      // Hero — "Filament": particles combed along a noise-driven flow
-      // field, gathering into one off-center vortex knot. A handful of
-      // faster orange "signal" particles cut through the gray current
-      // and drop a trail of small dots as they pass.
-      filament: function (seed) {
-        var noise = makeNoise2D(seed);
-        var rand = mulberry32(seed ^ 0x9e3779b9);
-        var N = 150;
-        var particles = [];
-        function respawn(p, w, h) {
-          // Emitter straddles the left/bottom edges rather than sitting
-          // neatly inside them — with the canvas now bleeding past its
-          // own column, particles should already be arriving from
-          // off-frame rather than only ever being born on-screen.
-          p.x = rand() * w * 1.2 - w * 0.1;
-          p.y = rand() * h * 1.2 - h * 0.1;
-          p.age = 0;
-          p.life = 3.6 + rand() * 3.2;
+      // Hero — "Stack": the headline drawn rather than decorated. Three
+      // strata, top to bottom: spend crossing above, the store as
+      // structure in the middle, measurement running underneath. Each
+      // event falls out of the spend layer, through a gap in the store,
+      // and — only if the tracking below is wired up — lands on the
+      // baseline as a recorded tick. The rest dissolve in the gap between
+      // the two: the sale happened, nothing caught it. That caught-share
+      // breathes on a slow cycle, so the piece keeps moving between a
+      // leaky measurement layer and a sound one rather than asserting
+      // either. Orange is only ever *recorded* revenue — which is the
+      // distinction the whole page is arguing about.
+      stack: function (seed) {
+        var rand = mulberry32(seed ^ 0x57ac);
+        var N = 70,
+          CELLS = 7;
+        var evts = [],
+          ticks = [],
+          tAcc = 0;
+
+        function spawn(e, w, h, scatter) {
+          e.x = -0.06 * w + rand() * w * 0.45;
+          e.y = h * (0.03 + rand() * 0.13);
+          // First fill only: scatter through the whole frame so the piece
+          // opens mid-flow instead of with one tidy cohort at the top.
+          if (scatter) {
+            e.x += rand() * w * 0.6;
+            e.y += rand() * h * 0.75;
+          }
+          e.px = e.x;
+          e.py = e.y;
+          e.vx = (0.1 + rand() * 0.14) * w;
+          e.vy = (0.1 + rand() * 0.14) * h;
+          e.judged = false;
+          e.tracked = false;
+          e.dead = 0;
         }
-        for (var i = 0; i < N; i++) {
-          var p = { d: rand(), orange: i < 8, drop: 0, x: undefined };
-          particles.push(p);
-        }
-        particles.sort(function (a, b) {
-          return b.d - a.d;
-        });
-        var tAcc = 0;
+        for (var i = 0; i < N; i++) evts.push({ x: undefined });
 
         return function (ctx, w, h, dt) {
           tAcc += dt;
-          fadeTrail(ctx, w, h, fadeAmt(2.8, dt));
-          // The vortex knot drifts on two incommensurate periods (146s,
-          // 203s) rather than sitting pinned at one fixed point forever —
-          // a piece that runs continuously and never resets needs a
-          // moving centre or "free" just means "slow forever."
-          // Centred, not off in a corner — the whole field reads as one
-          // funnel pulling scattered signal into a single point (tracking
-          // finding its attribution), not debris drifting near an edge.
-          var vx0 = w * (0.5 + 0.06 * Math.sin(tAcc * 0.043)),
-            vy0 = h * (0.5 + 0.05 * Math.cos(tAcc * 0.031));
-          var k = Math.pow(0.55 * h, 2) || 1;
-          // A generous margin, not a hard ±10px wall: the canvas clips
-          // regardless (its own bitmap edge), so this only changes when a
-          // particle recycles — now it drifts out past the visible frame
-          // and is gone, rather than snapping back the instant it grazes
-          // the edge, which read as a wall even after the box lost its
-          // visible border.
-          var M = Math.min(w, h) * 0.35;
-          for (var i = 0; i < particles.length; i++) {
-            var p = particles[i];
-            if (p.x === undefined || p.age > p.life || p.x < -M || p.x > w + M || p.y < -M || p.y > h + M) {
-              respawn(p, w, h);
-            }
-            var nx = p.x / w,
-              ny = p.y / h;
-            var ang = noise.fbm(nx * 2.6, ny * 2.6 + tAcc * 0.1, 3) * Math.PI * 3.2;
-            var dx = p.x - vx0,
-              dy = p.y - vy0,
-              r2 = dx * dx + dy * dy;
-            var wgt = k / (k + r2);
-            var vortA = Math.atan2(dy, dx) + Math.PI / 2;
-            ang = ang * (1 - wgt * 0.85) + vortA * (wgt * 0.85);
-            var spd = Math.min(w, h) * (p.orange ? 0.62 : 0.46);
-            var vx = (Math.cos(ang) * 0.95 + 0.05) * spd;
-            var vy = (Math.sin(ang) * 0.95 - 0.14) * spd;
-            var px = p.x,
-              py = p.y;
-            p.x += vx * dt;
-            p.y += vy * dt;
-            p.age += dt;
+          ctx.clearRect(0, 0, w, h);
 
-            var depthT = 1 - p.d;
-            var alpha = p.orange ? 0.24 : 0.045 + depthT * 0.13;
-            // Stroke weight is the one thing here that didn't already key
-            // off w/h — in a box 2-3x its old size the lines would go
-            // visibly thinner without this. sc=1 reproduces the old box's
-            // weight exactly; sc=1.5 at the new hero size.
-            var sc = Math.max(1, Math.min(w, h) / 260);
-            var lw = (p.orange ? 1.3 : 0.5 + depthT * 0.65) * sc;
-            ctx.strokeStyle = p.orange ? rgba(ORANGE, alpha) : rgba(p.d > 0.66 ? GRAY : INK, alpha);
-            ctx.lineWidth = lw;
+          var storeT = h * 0.44,
+            storeB = h * 0.52,
+            baseY = h * 0.8,
+            pad = w * 0.06,
+            span = w - pad * 2;
+
+          // The share of what happens upstairs that the tracking actually
+          // catches. Breathes rather than sitting fixed, so the piece
+          // shows both the broken and the wired-up state.
+          var health = 0.38 + 0.44 * (0.5 + 0.5 * Math.sin(tAcc * 0.085));
+
+          // ── middle stratum: the store, as structure with gaps
+          // Outlined, not filled: the store is structure the events pass
+          // through, not the heaviest mass on the canvas.
+          var cw = (span / CELLS) * 0.52;
+          ctx.strokeStyle = rgba(INK, 0.2);
+          ctx.lineWidth = 1;
+          for (var c = 0; c < CELLS; c++) {
+            ctx.strokeRect(
+              Math.round(pad + (span / CELLS) * (c + 0.5) - cw / 2) + 0.5,
+              Math.round(storeT) + 0.5,
+              Math.round(cw),
+              Math.round(storeB - storeT)
+            );
+          }
+
+          // ── bottom stratum: the measurement layer
+          ctx.strokeStyle = rgba(INK, 0.24);
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(pad * 0.4, baseY + 0.5);
+          ctx.lineTo(w - pad * 0.4, baseY + 0.5);
+          ctx.stroke();
+          ctx.fillStyle = rgba(INK, 0.13);
+          for (var g = 0; g <= 22; g++) {
+            ctx.fillRect(pad * 0.4 + ((w - pad * 0.8) / 22) * g, baseY + 2.5, 1, 3);
+          }
+
+          // ── top stratum falling through the other two
+          for (var k = 0; k < evts.length; k++) {
+            var e = evts[k];
+            if (e.x === undefined) spawn(e, w, h, true);
+            e.px = e.x;
+            e.py = e.y;
+            e.x += e.vx * dt;
+            e.y += e.vy * dt;
+
+            // Decided once, on the way out of the store: caught or not.
+            if (!e.judged && e.y >= storeB) {
+              e.judged = true;
+              e.tracked = rand() < health;
+            }
+            if (e.judged && !e.tracked) e.dead += dt * 1.6;
+
+            if (e.judged && e.tracked && e.py < baseY && e.y >= baseY) {
+              ticks.push({ x: e.x, t: 0 });
+              spawn(e, w, h, false);
+              continue;
+            }
+            if (e.y > h * 1.08 || e.x > w * 1.12 || e.dead >= 1) {
+              spawn(e, w, h, false);
+              continue;
+            }
+
+            var col = GRAY,
+              al = 0.3;
+            if (!e.judged) {
+              col = ORANGE;
+              al = e.y < storeT ? 0.6 : 0.44;
+            } else if (e.tracked) {
+              col = ORANGE;
+              al = 0.72;
+            } else {
+              al = 0.46 * (1 - e.dead);
+            }
+            // A fixed-length streak, not the single frame's step: the
+            // canvas is cleared every frame, so one frame of travel is a
+            // 3px dash and the whole layer reads as empty.
+            ctx.strokeStyle = rgba(col, al);
+            ctx.lineWidth = e.judged && e.tracked ? 1.3 : 1;
             ctx.beginPath();
-            ctx.moveTo(px, py);
-            ctx.lineTo(p.x, p.y);
+            ctx.moveTo(e.x - e.vx * 0.13, e.y - e.vy * 0.13);
+            ctx.lineTo(e.x, e.y);
             ctx.stroke();
+          }
 
-            if (p.orange) {
-              p.drop += dt;
-              if (p.drop > 0.34) {
-                p.drop = 0;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
-                ctx.fillStyle = rgba(ORANGE, 0.5);
-                ctx.fill();
-              }
+          // ── what the tracking actually recorded, accumulating
+          for (var t2 = ticks.length - 1; t2 >= 0; t2--) {
+            var tk = ticks[t2];
+            tk.t += dt;
+            if (tk.t > 9) {
+              ticks.splice(t2, 1);
+              continue;
             }
+            var grow = Math.min(1, tk.t * 4),
+              fade = 1 - tk.t / 9;
+            ctx.fillStyle = rgba(ORANGE, 0.7 * fade);
+            ctx.fillRect(tk.x - 0.7, baseY - 11 * grow, 1.4, 11 * grow);
           }
         };
       },
@@ -783,189 +827,118 @@
         };
       },
 
-      // "How I work" — "Chladni": grains of sand on a driven plate. Each
-      // grain runs a biased (Metropolis-style) random walk on the plate's
-      // amplitude field: propose a small hop, take it if it lowers
-      // |amplitude|, otherwise take it only with a small escape
-      // probability. Downhill is free, uphill is expensive, and motion
-      // *along* a nodal curve costs nothing — so grains fall onto the
-      // zero-crossings and then travel along them, which is what actually
-      // draws the line. Step length scales with |amplitude|, so a grain in
-      // a loud region crosses the plate in a few frames and a grain on a
-      // node only twitches. Morphs to the next mode pair on a slow curated
-      // cycle; the morph spikes `heat`, which loosens the walk and shortens
-      // the trail memory, so the old figure is swept off and the new one
-      // crystallises rather than cross-fading into mud.
-      chladni: function (seed) {
-        var rand = mulberry32(seed ^ 0xabcdef);
-        var modePairs = [
-          [2, 7],
-          [3, 5],
-          [4, 9],
-          [1, 4],
-          [3, 8]
-        ];
-        var curIdx = 0,
-          nextIdx = 1,
-          morphing = false,
-          morphT = 0,
-          cycleT = 0,
-          heat = 1,
-          stepAcc = 0,
-          driftT = 0;
+      // "How we work" — "Fork": the section's argument, not a texture.
+      // Both runs start from the same point and both end up scaled — that
+      // is the honest part, spend does grow either way. What differs is
+      // what it grows into. The lower run scales first, so every step
+      // inherits the error of the step before it: the spread compounds on
+      // itself and the run ends as a grey haze with nothing recoverable
+      // in it. The upper run holds still while the measurement gets
+      // fixed — the flat, narrow, visibly boring stretch on the left —
+      // and only then opens up, so its strands stay ordered the whole way
+      // out. The gap between them is the cost of the wrong order, and it
+      // is drawn widening rather than stated.
+      fork: function (seed) {
+        var rand = mulberry32(seed ^ 0xf02c);
+        var STR = 30,
+          SEG = 46,
+          FIX = 0.34; // where the upper run stops holding and starts scaling
+        var good = [],
+          bad = [];
+        var p = 0,
+          holdT = 0,
+          phase = "draw";
 
-        var NP = 1900, // total grains
-          N_ORANGE = 55, // accent grains, seeded as one cluster
-          EDGE = 0.012, // keep grains off the plate rim
-          SPAN = 1 - EDGE * 2,
-          MIN_STEP = 0.0018, // sets the settled line width
-          MAX_STEP = 0.03, // how fast a loud-region grain travels
-          WALK_HZ = 120; // walk steps per second, framerate-independent
+        function build() {
+          good.length = 0;
+          bad.length = 0;
+          for (var s = 0; s < STR; s++) {
+            var gy = [],
+              by = [],
+              acc = (rand() - 0.5) * 0.015,
+              vel = 0;
+            for (var i = 0; i <= SEG; i++) {
+              var u = i / SEG;
+              // Fix first: locked flat until the data is sound, then a
+              // bounded fan — each strand's own lane, held.
+              var open = u < FIX ? 0 : (u - FIX) / (1 - FIX);
+              gy.push((s / (STR - 1) - 0.5) * open * open * 0.4 + (rand() - 0.5) * 0.006 * open);
+              // Scale first: the error is integrated twice — it does not
+              // just persist, it accelerates away from the truth.
+              vel += (rand() - 0.5) * 0.0048 * (0.3 + u * 1.9);
+              acc += vel * 0.5;
+              if (acc > 0.24) acc = 0.24;
+              if (acc < -0.24) acc = -0.24;
+              by.push(acc);
+            }
+            good.push(gy);
+            bad.push(by);
+          }
+        }
+        build();
 
-        // Accent grains are sprinkled into one small patch rather than over
-        // the whole plate, so they settle as a single orange arc on whichever
-        // nodal curve runs through it — an accent, not confetti.
-        var OX = 0.5,
-          OY = 0.42,
-          OR = 0.15;
-
-        var pts = [];
-        function respawn(p) {
-          if (p.orange) {
-            var a = rand() * Math.PI * 2,
-              r = OR * Math.sqrt(rand());
-            p.x = OX + Math.cos(a) * r;
-            p.y = OY + Math.sin(a) * r;
-            p.life = 26 + rand() * 26;
+        return function (ctx, w, h, dt) {
+          if (phase === "draw") {
+            p += dt * 0.26;
+            if (p >= 1) {
+              p = 1;
+              phase = "hold";
+              holdT = 0;
+            }
           } else {
-            p.x = EDGE + rand() * SPAN;
-            p.y = EDGE + rand() * SPAN;
-            p.life = 7 + rand() * 15;
-          }
-          p.x = Math.min(1 - EDGE, Math.max(EDGE, p.x));
-          p.y = Math.min(1 - EDGE, Math.max(EDGE, p.y));
-          p.age = 0;
-          p.calm = 0;
-        }
-        for (var i = 0; i < NP; i++) {
-          var pt = { orange: i < N_ORANGE };
-          respawn(pt);
-          pt.age = rand() * pt.life; // stagger the first recycle
-          pts.push(pt);
-        }
-
-        function amp(u, v, n, m) {
-          return Math.sin(n * Math.PI * u) * Math.sin(m * Math.PI * v) - Math.sin(m * Math.PI * u) * Math.sin(n * Math.PI * v);
-        }
-
-        return function (ctx, w, h, dt, cv) {
-          cycleT += dt;
-          if (!morphing && cycleT > 13) {
-            morphing = true;
-            morphT = 0;
-            heat = 1;
-          }
-          var curM = modePairs[curIdx][0],
-            curN = modePairs[curIdx][1];
-          var mm = curM,
-            nn = curN;
-          if (morphing) {
-            morphT += dt;
-            var tt = Math.min(1, morphT / 2.4);
-            var tgt = modePairs[nextIdx];
-            mm = curM + (tgt[0] - curM) * tt;
-            nn = curN + (tgt[1] - curN) * tt;
-            if (tt >= 1) {
-              morphing = false;
-              cycleT = 0;
-              curIdx = nextIdx;
-              nextIdx = (nextIdx + 1) % modePairs.length;
+            holdT += dt;
+            if (holdT > 4.2) {
+              build();
+              p = 0;
+              phase = "draw";
             }
           }
 
-          heat *= Math.exp(-dt / 1.7);
-          if (morphing && heat < 0.55) heat = 0.55;
+          ctx.clearRect(0, 0, w, h);
+          var x0 = w * 0.05,
+            x1 = w * 0.97,
+            gMid = h * 0.3,
+            bMid = h * 0.74;
+          var upto = Math.max(1, Math.round(SEG * p));
 
-          var pEsc = 0.02 + heat * 0.3;
-          var stepScale = 1 + heat * 0.9;
-
-          // Fixed walk rate regardless of display refresh: bank time, spend
-          // it in whole steps, cap the catch-up after a stall or a tab swap.
-          stepAcc += dt * WALK_HZ;
-          var nSteps = stepAcc | 0;
-          if (nSteps > 3) nSteps = 3;
-          stepAcc -= nSteps;
-
-          // Slow pan-and-overscan: the plate is drawn zoomed in a little
-          // past its own edges and the zoom window drifts, so the frame
-          // is always cropping a moving plate rather than showing the
-          // whole bounded square dead-center.
-          driftT += dt;
-          var OS = 1.26,
-            cxo = 0.5 + 0.055 * Math.sin(driftT * 0.037),
-            cyo = 0.5 + 0.045 * Math.cos(driftT * 0.029);
-
-          // Long memory while the figure holds (settled grains hammer the
-          // same pixel to near-solid ink); short memory while hot, so the
-          // previous figure is gone before the next one lands.
-          fadeTrail(ctx, w, h, fadeAmt(2.4 - heat * 1.75, dt));
-
-          // Snap every mark to the device-pixel grid. A 1px dot at a
-          // fractional coordinate is antialiased across four pixels at a
-          // quarter intensity each — which is precisely the grey haze this
-          // rewrite exists to remove.
-          var dpr = cv && cv.width ? cv.width / w : 1;
-          var q = 1 / dpr;
-          var lo = EDGE,
-            hi = 1 - EDGE;
-
-          for (var i = 0; i < pts.length; i++) {
-            var p = pts[i];
-            p.age += dt;
-            if (p.age > p.life) respawn(p);
-
-            var a0 = Math.abs(amp(p.x, p.y, nn, mm));
-            for (var s = 0; s < nSteps; s++) {
-              var t = Math.min(1, a0 / 0.9);
-              var mag = (MIN_STEP + (MAX_STEP - MIN_STEP) * t * t) * stepScale;
-              var ang = rand() * Math.PI * 2;
-              var nx = p.x + Math.cos(ang) * mag,
-                ny = p.y + Math.sin(ang) * mag;
-              if (nx < lo || nx > hi || ny < lo || ny > hi) {
-                // The plate's own boundary is a nodal line, so a grain whose
-                // nearest node IS the rim would sit against the wall forever
-                // and redraw the box the CSS just spent effort removing.
-                // Age it out early instead of letting it settle there.
-                p.age += 0.3;
-                continue;
-              }
-              var a1 = Math.abs(amp(nx, ny, nn, mm));
-              if (a1 <= a0 || rand() < pEsc) {
-                p.x = nx;
-                p.y = ny;
-                a0 = a1;
-              }
+          // ── scale first: wide, and none of it recoverable
+          ctx.lineWidth = 0.75;
+          ctx.strokeStyle = rgba(GRAY, 0.15);
+          for (var s2 = 0; s2 < STR; s2++) {
+            ctx.beginPath();
+            for (var i2 = 0; i2 <= upto; i2++) {
+              var xb = x0 + (x1 - x0) * (i2 / SEG),
+                yb = bMid + bad[s2][i2] * h;
+              if (i2) ctx.lineTo(xb, yb);
+              else ctx.moveTo(xb, yb);
             }
+            ctx.stroke();
+          }
 
-            // calm approaches 1 only when the grain is genuinely on a node —
-            // so in-transit grains stay a whisper and settled ones go black.
-            var calmT = 1 - Math.min(1, a0 / 0.18);
-            p.calm += (calmT - p.calm) * Math.min(1, dt * 7);
-            var c = p.calm * p.calm;
-            var sx = (p.x - cxo) * OS + 0.5,
-              sy = (p.y - cyo) * OS + 0.5;
-            var px = Math.round(sx * w * dpr) * q,
-              py = Math.round(sy * h * dpr) * q;
-
-            if (p.orange) {
-              if (c > 0.15) {
-                ctx.fillStyle = rgba(ORANGE, 0.06 + c * 0.42);
-                ctx.fillRect(px, py, q * 2, q * 2);
-              }
-            } else {
-              ctx.fillStyle = rgba(INK, 0.03 + c * 0.3);
-              ctx.fillRect(px, py, q, q);
+          // ── fix first: boring on the left, ordered all the way out
+          for (var s3 = 0; s3 < STR; s3++) {
+            var isAcc = s3 % 7 === 3;
+            ctx.strokeStyle = isAcc ? rgba(ORANGE, 0.5) : rgba(INK, 0.17);
+            ctx.lineWidth = isAcc ? 1.1 : 0.7;
+            ctx.beginPath();
+            for (var i3 = 0; i3 <= upto; i3++) {
+              var xg = x0 + (x1 - x0) * (i3 / SEG),
+                yg = gMid + good[s3][i3] * h;
+              if (i3) ctx.lineTo(xg, yg);
+              else ctx.moveTo(xg, yg);
             }
+            ctx.stroke();
+          }
+
+          // ── the moment the measurement is sound and scaling may start
+          if (p > FIX) {
+            var fx = x0 + (x1 - x0) * FIX;
+            ctx.strokeStyle = rgba(INK, 0.22);
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(fx, gMid - h * 0.055);
+            ctx.lineTo(fx, gMid + h * 0.055);
+            ctx.stroke();
           }
         };
       },
@@ -1094,10 +1067,10 @@
     // warmup — its build-up IS the scroll-linked reveal, and pre-filling
     // it would spoil the one piece that responds to the reader directly.
     var CFG = {
-      filament: { warmup: 70, reduced: 400 },
+      stack: { warmup: 60, reduced: 320 },
       harmonograph: { warmup: 0, reduced: 1500 },
       isopleth: { warmup: 6, reduced: 6 },
-      chladni: { warmup: 170, reduced: 190 },
+      fork: { warmup: 110, reduced: 260 },
       development: { warmup: 60, reduced: 130 }
     };
 
