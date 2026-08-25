@@ -580,10 +580,10 @@
           dissolveT = 0;
 
         function penXY(f, phase, tt, w, h, damp) {
-          var A1 = 0.34 * w,
-            A2 = 0.16 * w,
-            A3 = 0.4 * h,
-            A4 = 0.18 * h;
+          var A1 = 0.29 * w,
+            A2 = 0.14 * w,
+            A3 = 0.33 * h,
+            A4 = 0.15 * h;
           var x =
             A1 * Math.sin(f[0] * tt + phase) * Math.exp(-damp[0] * tt) +
             A2 * Math.sin(f[1] * tt + phase + 1.3) * Math.exp(-damp[1] * tt);
@@ -719,12 +719,19 @@
         };
       },
 
-      // "How I work" — "Chladni": a thousand grains of sand agitated by a
-      // standing wave, wandering until they settle on its nodal lines.
-      // Doesn't clear between frames — agitated grains smear into mist,
-      // settled ones hammer the same pixels into near-solid — so mist and
-      // crystal share one image. Morphs to the next mode pair on a slow
-      // curated cycle, dissolving into disorder mid-transition.
+      // "How I work" — "Chladni": grains of sand on a driven plate. Each
+      // grain runs a biased (Metropolis-style) random walk on the plate's
+      // amplitude field: propose a small hop, take it if it lowers
+      // |amplitude|, otherwise take it only with a small escape
+      // probability. Downhill is free, uphill is expensive, and motion
+      // *along* a nodal curve costs nothing — so grains fall onto the
+      // zero-crossings and then travel along them, which is what actually
+      // draws the line. Step length scales with |amplitude|, so a grain in
+      // a loud region crosses the plate in a few frames and a grain on a
+      // node only twitches. Morphs to the next mode pair on a slow curated
+      // cycle; the morph spikes `heat`, which loosens the walk and shortens
+      // the trail memory, so the old figure is swept off and the new one
+      // crystallises rather than cross-fading into mud.
       chladni: function (seed) {
         var rand = mulberry32(seed ^ 0xabcdef);
         var modePairs = [
@@ -738,20 +745,60 @@
           nextIdx = 1,
           morphing = false,
           morphT = 0,
-          cycleT = 0;
-        var NP = 1000;
+          cycleT = 0,
+          heat = 1,
+          stepAcc = 0;
+
+        var NP = 1400, // total grains
+          N_ORANGE = 40, // accent grains, seeded as one cluster
+          EDGE = 0.022, // keep grains off the plate rim
+          SPAN = 1 - EDGE * 2,
+          MIN_STEP = 0.0018, // sets the settled line width
+          MAX_STEP = 0.03, // how fast a loud-region grain travels
+          WALK_HZ = 120; // walk steps per second, framerate-independent
+
+        // Accent grains are sprinkled into one small patch rather than over
+        // the whole plate, so they settle as a single orange arc on whichever
+        // nodal curve runs through it — an accent, not confetti.
+        var OX = 0.66,
+          OY = 0.33,
+          OR = 0.15;
+
         var pts = [];
-        for (var i = 0; i < NP; i++) pts.push({ x: rand(), y: rand(), settle: 0, orange: i < 46 });
+        function respawn(p) {
+          if (p.orange) {
+            var a = rand() * Math.PI * 2,
+              r = OR * Math.sqrt(rand());
+            p.x = OX + Math.cos(a) * r;
+            p.y = OY + Math.sin(a) * r;
+            p.life = 26 + rand() * 26;
+          } else {
+            p.x = EDGE + rand() * SPAN;
+            p.y = EDGE + rand() * SPAN;
+            p.life = 7 + rand() * 15;
+          }
+          p.x = Math.min(1 - EDGE, Math.max(EDGE, p.x));
+          p.y = Math.min(1 - EDGE, Math.max(EDGE, p.y));
+          p.age = 0;
+          p.calm = 0;
+        }
+        for (var i = 0; i < NP; i++) {
+          var pt = { orange: i < N_ORANGE };
+          respawn(pt);
+          pt.age = rand() * pt.life; // stagger the first recycle
+          pts.push(pt);
+        }
 
         function amp(u, v, n, m) {
           return Math.sin(n * Math.PI * u) * Math.sin(m * Math.PI * v) - Math.sin(m * Math.PI * u) * Math.sin(n * Math.PI * v);
         }
 
-        return function (ctx, w, h, dt) {
+        return function (ctx, w, h, dt, cv) {
           cycleT += dt;
           if (!morphing && cycleT > 13) {
             morphing = true;
             morphT = 0;
+            heat = 1;
           }
           var curM = modePairs[curIdx][0],
             curN = modePairs[curIdx][1];
@@ -770,19 +817,79 @@
               nextIdx = (nextIdx + 1) % modePairs.length;
             }
           }
-          fadeTrail(ctx, w, h, fadeAmt(0.55, dt));
+
+          heat *= Math.exp(-dt / 1.7);
+          if (morphing && heat < 0.55) heat = 0.55;
+
+          var pEsc = 0.02 + heat * 0.3;
+          var stepScale = 1 + heat * 0.9;
+
+          // Fixed walk rate regardless of display refresh: bank time, spend
+          // it in whole steps, cap the catch-up after a stall or a tab swap.
+          stepAcc += dt * WALK_HZ;
+          var nSteps = stepAcc | 0;
+          if (nSteps > 4) nSteps = 4;
+          stepAcc -= nSteps;
+
+          // Long memory while the figure holds (settled grains hammer the
+          // same pixel to near-solid ink); short memory while hot, so the
+          // previous figure is gone before the next one lands.
+          fadeTrail(ctx, w, h, fadeAmt(2.4 - heat * 1.75, dt));
+
+          // Snap every mark to the device-pixel grid. A 1px dot at a
+          // fractional coordinate is antialiased across four pixels at a
+          // quarter intensity each — which is precisely the grey haze this
+          // rewrite exists to remove.
+          var dpr = cv && cv.width ? cv.width / w : 1;
+          var q = 1 / dpr;
+          var lo = EDGE,
+            hi = 1 - EDGE;
+
           for (var i = 0; i < pts.length; i++) {
             var p = pts[i];
-            var a = Math.abs(amp(p.x, p.y, nn, mm));
-            var stepMag = Math.max(0.0016, Math.min(0.02, a * 0.022));
-            var ang = rand() * Math.PI * 2;
-            p.x = clamp01(p.x + Math.cos(ang) * stepMag);
-            p.y = clamp01(p.y + Math.sin(ang) * stepMag);
-            p.settle = p.settle * 0.98 + (1 - Math.min(1, a * 3)) * 0.02;
-            var px = p.x * w,
-              py = p.y * h;
-            ctx.fillStyle = p.orange ? rgba(ORANGE, 0.3) : rgba(INK, 0.12 + p.settle * 0.42);
-            ctx.fillRect(px, py, 1.2, 1.2);
+            p.age += dt;
+            if (p.age > p.life) respawn(p);
+
+            var a0 = Math.abs(amp(p.x, p.y, nn, mm));
+            for (var s = 0; s < nSteps; s++) {
+              var t = Math.min(1, a0 / 0.9);
+              var mag = (MIN_STEP + (MAX_STEP - MIN_STEP) * t * t) * stepScale;
+              var ang = rand() * Math.PI * 2;
+              var nx = p.x + Math.cos(ang) * mag,
+                ny = p.y + Math.sin(ang) * mag;
+              if (nx < lo || nx > hi || ny < lo || ny > hi) {
+                // The plate's own boundary is a nodal line, so a grain whose
+                // nearest node IS the rim would sit against the wall forever
+                // and redraw the box the CSS just spent effort removing.
+                // Age it out early instead of letting it settle there.
+                p.age += 0.3;
+                continue;
+              }
+              var a1 = Math.abs(amp(nx, ny, nn, mm));
+              if (a1 <= a0 || rand() < pEsc) {
+                p.x = nx;
+                p.y = ny;
+                a0 = a1;
+              }
+            }
+
+            // calm approaches 1 only when the grain is genuinely on a node —
+            // so in-transit grains stay a whisper and settled ones go black.
+            var calmT = 1 - Math.min(1, a0 / 0.18);
+            p.calm += (calmT - p.calm) * Math.min(1, dt * 7);
+            var c = p.calm * p.calm;
+            var px = Math.round(p.x * w * dpr) * q,
+              py = Math.round(p.y * h * dpr) * q;
+
+            if (p.orange) {
+              if (c > 0.15) {
+                ctx.fillStyle = rgba(ORANGE, 0.06 + c * 0.42);
+                ctx.fillRect(px, py, q * 2, q * 2);
+              }
+            } else {
+              ctx.fillStyle = rgba(INK, 0.03 + c * 0.3);
+              ctx.fillRect(px, py, q, q);
+            }
           }
         };
       },
@@ -899,7 +1006,7 @@
       filament: { warmup: 70, reduced: 400 },
       harmonograph: { warmup: 0, reduced: 1500 },
       isopleth: { warmup: 6, reduced: 6 },
-      chladni: { warmup: 70, reduced: 150 },
+      chladni: { warmup: 110, reduced: 190 },
       development: { warmup: 60, reduced: 130 }
     };
 

@@ -121,7 +121,7 @@ p:last-child{margin-bottom:0}
 .fig.in .n em{transform:translateY(0)}
 .fig .k{display:block;margin-top:11px;font-size:14px;color:var(--soft);max-width:24ch;line-height:1.4}
 
-.steps-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,280px);gap:clamp(24px,4vw,56px);align-items:start;margin-top:clamp(40px,6vw,60px)}
+.steps-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(200px,320px);gap:clamp(24px,4vw,56px);align-items:start;margin-top:clamp(40px,6vw,60px)}
 .steps{display:grid;gap:clamp(24px,3vw,34px)}
 .step{display:grid;grid-template-columns:52px minmax(0,1fr);gap:clamp(14px,2vw,26px);align-items:start}
 .step .idx{font-family:var(--display);font-size:12.5px;font-weight:500;color:var(--soft);padding-top:4px}
@@ -151,25 +151,61 @@ p:last-child{margin-bottom:0}
 .stage p{color:var(--soft);max-width:38ch}
 
 /* ─── generative graphics ─────────────────────────────────
-   Small canvas sketches dropped into a few spots that were
-   otherwise just whitespace next to a heading or a list.
-   Same grayscale palette as everything else, one accent
-   touch each — quiet company for the copy, not competition
-   for it. Hidden below 820px where there's no room to spare. */
-.hero-graphic,.work-graphic,.services-graphic,.approach-graphic,.contact-graphic{
-  border:1px solid var(--rule);border-radius:2px;overflow:hidden;background:var(--ground);
-}
+   No frame, no fill: each canvas is masked with a soft
+   radial falloff so the art dissolves into the page instead
+   of being clipped by a rectangle. The canvas is already
+   transparent (fadeTrail erases with destination-out), so
+   the ground colour underneath it was doing nothing anyway.
+   Mask geometry is tuned per sketch to protect each
+   composition's focal point — see the notes on each rule.
+   Hidden below 820px where there's no room to spare. */
 .hero-graphic canvas,.work-graphic canvas,.services-graphic canvas,
 .approach-graphic canvas,.contact-graphic canvas{
   display:block;width:100%;height:100%;
   opacity:0;transition:opacity .6s var(--ease);
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
 }
 canvas[data-graphic].ready{opacity:1}
 
-.hero-graphic{height:clamp(220px,26vw,360px);align-self:stretch}
-.work-graphic{position:sticky;top:100px;height:clamp(280px,32vw,440px)}
-.services-graphic,.approach-graphic{height:clamp(150px,16vw,200px)}
-.contact-graphic{height:clamp(140px,16vw,200px)}
+/* Filament — mask centred on the vortex knot (38%/42%), not the box.
+   closest-side pins the falloff to exactly zero at the near edges. */
+canvas[data-graphic="filament"]{
+  -webkit-mask-image:radial-gradient(ellipse closest-side at 40% 46%,#000 44%,transparent 100%);
+          mask-image:radial-gradient(ellipse closest-side at 40% 46%,#000 44%,transparent 100%);
+}
+/* Harmonograph — pulled in to match the tightened pen amplitudes: the
+   rosette's faintest outermost sweeps are now the only part that dissolves. */
+canvas[data-graphic="harmonograph"]{
+  -webkit-mask-image:radial-gradient(ellipse closest-side at 42% 50%,#000 52%,transparent 100%);
+          mask-image:radial-gradient(ellipse closest-side at 42% 50%,#000 52%,transparent 100%);
+}
+/* Isopleth — largest opaque core of the five (72%), so it keeps reading as
+   a fragment of a bigger map rather than a vignetted picture of one. */
+canvas[data-graphic="isopleth"]{
+  -webkit-mask-image:radial-gradient(ellipse closest-side at 48% 50%,#000 72%,transparent 100%);
+          mask-image:radial-gradient(ellipse closest-side at 48% 50%,#000 72%,transparent 100%);
+}
+/* Chladni — a true circle, not an ellipse: the plate reads as a round
+   Chladni disc, and the square plate's own boundary (which is itself a
+   nodal line, and does attract grains) falls outside the mask entirely. */
+canvas[data-graphic="chladni"]{
+  -webkit-mask-image:radial-gradient(circle closest-side at 50% 50%,#000 68%,transparent 100%);
+          mask-image:radial-gradient(circle closest-side at 50% 50%,#000 68%,transparent 100%);
+}
+/* Development — offset to match the attractor's own centre (44%/47%) so the
+   soft edge lands on the caustics rather than slicing the dense core. */
+canvas[data-graphic="development"]{
+  -webkit-mask-image:radial-gradient(ellipse closest-side at 44% 47%,#000 60%,transparent 100%);
+          mask-image:radial-gradient(ellipse closest-side at 44% 47%,#000 60%,transparent 100%);
+}
+
+/* Sizes diverge on purpose: a tall slender column for the filament, a
+   near-square plate for the Chladni, a landscape sheet for the contour map. */
+.hero-graphic{height:clamp(260px,30vw,440px)}
+.work-graphic{position:sticky;top:100px;height:clamp(320px,34vw,460px)}
+.services-graphic{height:clamp(200px,22vw,290px)}
+.approach-graphic{height:clamp(240px,26vw,350px)}
+.contact-graphic{height:clamp(190px,21vw,280px)}
 
 .contact-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,240px);gap:clamp(24px,5vw,60px);align-items:center}
 
