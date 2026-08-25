@@ -266,219 +266,652 @@
   );
 
   /* ── generative graphics ──────────────────────────────────
-     A handful of canvas sketches dropped into spots that were
-     otherwise just whitespace — a sparkline by the hero, a
-     scanning checklist by the build steps, firing pixels under
-     "What I do", an order-matters relay under "How I work", a
-     ping by the contact line. Same grayscale palette as the
-     rest of the page, one accent touch each. Each draws a
-     single static frame under prefers-reduced-motion and pauses
-     its rAF loop while off-screen; independent of GSAP entirely.
+     Five instruments, one idea: an invisible field made visible
+     by something moving through it. A flow field combed by
+     particles (hero), a damped four-term oscillator drawing
+     itself in ink (build steps), a domain-warped noise field
+     read as contour lines (what I do), a standing wave sorting
+     sand into figures (how I work), a strange attractor
+     developing like a print in a tray (contact). Same grayscale
+     palette throughout; orange is a scarcity budget, never more
+     than a sliver of any frame — a few signal particles in the
+     current, a mis-registered second pass, one contour among
+     six, flecks in the sand, a caustic ridge. Every piece is
+     built by accumulating near-transparent marks rather than
+     drawing solid shapes, so texture comes from dwell time, not
+     detail. Independent of GSAP; each pauses off-screen and
+     collapses to one considered static frame under
+     prefers-reduced-motion instead of animating.
      ───────────────────────────────────────────────────────── */
   (function () {
     var nodes = document.querySelectorAll("[data-graphic]");
     if (!nodes.length || typeof HTMLCanvasElement === "undefined") return;
 
-    var rootCss = getComputedStyle(document.documentElement);
-    var COL = {
-      ink: rootCss.getPropertyValue("--ink").trim() || "#111111",
-      soft: rootCss.getPropertyValue("--soft").trim() || "#6F6B63",
-      rule: rootCss.getPropertyValue("--rule").trim() || "#DDDAD3",
-      accent: rootCss.getPropertyValue("--accent").trim() || "#E2661F",
-      ground: rootCss.getPropertyValue("--ground").trim() || "#F5F4F0"
-    };
+    var INK = [17, 17, 17];
+    var GRAY = [111, 107, 99];
+    var ORANGE = [226, 102, 31];
 
-    // Each entry is a factory: called once per canvas, returns a
-    // frame(ctx, w, h, t) closure that owns its own local state
-    // (a random walk, a flash map, a travelling dot) so multiple
-    // instances of the same sketch never share memory.
+    function rgba(c, a) {
+      return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")";
+    }
+    function clamp01(v) {
+      return v < 0 ? 0 : v > 1 ? 1 : v;
+    }
+    function hashStr(s) {
+      var h = 5381;
+      for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+      return h >>> 0;
+    }
+
+    // Deterministic PRNG (mulberry32) — each instance gets its own seed so
+    // the reduced-motion frame is a curated snapshot, not a lottery ticket.
+    function mulberry32(a) {
+      return function () {
+        a |= 0;
+        a = (a + 0x6d2b79f5) | 0;
+        var t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    // Compact 2D gradient noise + fBm. Not a scientific Perlin
+    // implementation, just enough correlated randomness for organic drift.
+    function makeNoise2D(seed) {
+      var rand = mulberry32(seed);
+      var p = new Uint8Array(256);
+      for (var i = 0; i < 256; i++) p[i] = i;
+      for (var j = 255; j > 0; j--) {
+        var k = (rand() * (j + 1)) | 0;
+        var tmp = p[j];
+        p[j] = p[k];
+        p[k] = tmp;
+      }
+      var perm = new Uint8Array(512);
+      for (var m = 0; m < 512; m++) perm[m] = p[m & 255];
+
+      function fade(t) {
+        return t * t * t * (t * (t * 6 - 15) + 10);
+      }
+      function lerp(a, b, t) {
+        return a + t * (b - a);
+      }
+      function grad(hash, x, y) {
+        var h = hash & 7;
+        var u = h < 4 ? x : y;
+        var v = h < 4 ? y : x;
+        return (h & 1 ? -u : u) + (h & 2 ? -2 * v : 2 * v);
+      }
+      function noise2(x, y) {
+        var X = Math.floor(x) & 255,
+          Y = Math.floor(y) & 255;
+        x -= Math.floor(x);
+        y -= Math.floor(y);
+        var u = fade(x),
+          v = fade(y);
+        var a = perm[X] + Y,
+          aa = perm[a],
+          ab = perm[a + 1];
+        var b = perm[X + 1] + Y,
+          ba = perm[b],
+          bb = perm[b + 1];
+        return (
+          lerp(
+            lerp(grad(perm[aa], x, y), grad(perm[ba], x - 1, y), u),
+            lerp(grad(perm[ab], x, y - 1), grad(perm[bb], x - 1, y - 1), u),
+            v
+          ) *
+            0.5 +
+          0.5
+        );
+      }
+      function fbm(x, y, oct, lac, gain) {
+        oct = oct || 3;
+        lac = lac || 2;
+        gain = gain || 0.5;
+        var amp = 1,
+          freq = 1,
+          sum = 0,
+          norm = 0;
+        for (var i = 0; i < oct; i++) {
+          sum += amp * (noise2(x * freq, y * freq) * 2 - 1);
+          norm += amp;
+          amp *= gain;
+          freq *= lac;
+        }
+        return sum / norm;
+      }
+      return { noise2: noise2, fbm: fbm };
+    }
+
+    // Trail decay via destination-out so marks fade to true transparency
+    // (the box's off-white CSS background shows through) rather than
+    // asymptoting toward a muddy tint the way a low-alpha ground fill does.
+    function fadeTrail(ctx, w, h, amount) {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.fillStyle = "rgba(0,0,0," + amount + ")";
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = "source-over";
+    }
+    // Framerate-independent decay amount for a given memory (seconds).
+    function fadeAmt(tau, dt) {
+      return 1 - Math.exp(-dt / tau);
+    }
+
+    // Standard marching squares (linear edge interpolation, saddle cases
+    // resolved a fixed way — any artifact there is a sub-pixel nicety at
+    // this scale) — draws every crossing of `level` into the current path.
+    function marchContour(field, cols, rows, cell, level, ctx) {
+      function v(i, j) {
+        return field[j * cols + i];
+      }
+      function seg(a, b) {
+        ctx.moveTo(a[0], a[1]);
+        ctx.lineTo(b[0], b[1]);
+      }
+      ctx.beginPath();
+      for (var j = 0; j < rows - 1; j++) {
+        for (var i = 0; i < cols - 1; i++) {
+          var x = i * cell,
+            y = j * cell;
+          var v0 = v(i, j),
+            v1 = v(i + 1, j),
+            v2 = v(i + 1, j + 1),
+            v3 = v(i, j + 1);
+          var idx = (v0 > level ? 1 : 0) | (v1 > level ? 2 : 0) | (v2 > level ? 4 : 0) | (v3 > level ? 8 : 0);
+          if (idx === 0 || idx === 15) continue;
+          var top = [x + cell * clamp01((level - v0) / (v1 - v0 || 1e-6)), y];
+          var right = [x + cell, y + cell * clamp01((level - v1) / (v2 - v1 || 1e-6))];
+          var bottom = [x + cell * clamp01((level - v3) / (v2 - v3 || 1e-6)), y + cell];
+          var left = [x, y + cell * clamp01((level - v0) / (v3 - v0 || 1e-6))];
+          switch (idx) {
+            case 1:
+            case 14:
+              seg(top, left);
+              break;
+            case 2:
+            case 13:
+              seg(top, right);
+              break;
+            case 3:
+            case 12:
+              seg(left, right);
+              break;
+            case 4:
+            case 11:
+              seg(right, bottom);
+              break;
+            case 6:
+            case 9:
+              seg(top, bottom);
+              break;
+            case 7:
+            case 8:
+              seg(left, bottom);
+              break;
+            case 5:
+              seg(top, right);
+              seg(left, bottom);
+              break;
+            case 10:
+              seg(top, left);
+              seg(right, bottom);
+              break;
+          }
+        }
+      }
+      ctx.stroke();
+    }
+
+    // Each entry is a factory: called once per canvas with a seed, returns
+    // a frame(ctx, w, h, dt, cv) closure that owns its own local state —
+    // particle positions, an oscillator phase, a density grid — so
+    // multiple instances never share memory. dt is real elapsed seconds
+    // since the previous call (already clamped by the caller).
     var sketches = {
-      // Hero: a scrolling performance line over a faint dot grid.
-      signal: function () {
-        var pts = [], n = 34, val = 0.5, lastStep = -1;
-        for (var i = 0; i < n; i++) pts.push(val);
-        return function (ctx, w, h, t) {
-          ctx.clearRect(0, 0, w, h);
-          var step = Math.floor(t / 0.16);
-          if (step !== lastStep) {
-            lastStep = step;
-            val += (Math.random() - 0.5) * 0.24;
-            val = Math.max(0.08, Math.min(0.92, val));
-            pts.push(val);
-            pts.shift();
-          }
-          ctx.fillStyle = COL.rule;
-          var gap = 24;
-          for (var gx = gap / 2; gx < w; gx += gap) {
-            for (var gy = gap / 2; gy < h; gy += gap) {
-              ctx.beginPath();
-              ctx.arc(gx, gy, 1, 0, Math.PI * 2);
-              ctx.fill();
+      // Hero — "Filament": particles combed along a noise-driven flow
+      // field, gathering into one off-center vortex knot. A handful of
+      // faster orange "signal" particles cut through the gray current
+      // and drop a trail of small dots as they pass.
+      filament: function (seed) {
+        var noise = makeNoise2D(seed);
+        var rand = mulberry32(seed ^ 0x9e3779b9);
+        var N = 90;
+        var particles = [];
+        function respawn(p, w, h) {
+          p.x = rand() * w * 0.4;
+          p.y = h * (0.4 + rand() * 0.6);
+          p.age = 0;
+          p.life = 3.6 + rand() * 3.2;
+        }
+        for (var i = 0; i < N; i++) {
+          var p = { d: rand(), orange: i < 8, drop: 0, x: undefined };
+          particles.push(p);
+        }
+        particles.sort(function (a, b) {
+          return b.d - a.d;
+        });
+        var tAcc = 0;
+
+        return function (ctx, w, h, dt) {
+          tAcc += dt;
+          fadeTrail(ctx, w, h, fadeAmt(2.8, dt));
+          var vx0 = 0.38 * w,
+            vy0 = 0.42 * h;
+          var k = Math.pow(0.3 * h, 2) || 1;
+          for (var i = 0; i < particles.length; i++) {
+            var p = particles[i];
+            if (p.x === undefined || p.age > p.life || p.x < -10 || p.x > w + 10 || p.y < -10 || p.y > h + 10) {
+              respawn(p, w, h);
             }
-          }
-          ctx.beginPath();
-          for (var i2 = 0; i2 < pts.length; i2++) {
-            var x = (i2 / (pts.length - 1)) * w;
-            var y = h - pts[i2] * h * 0.72 - h * 0.12;
-            if (i2 === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          }
-          ctx.strokeStyle = COL.accent;
-          ctx.lineWidth = 1.75;
-          ctx.lineJoin = "round";
-          ctx.lineCap = "round";
-          ctx.stroke();
-          var ly = h - pts[pts.length - 1] * h * 0.72 - h * 0.12;
-          ctx.beginPath();
-          ctx.arc(w - 3, ly, 2.4 + Math.sin(t * 3) * 1, 0, Math.PI * 2);
-          ctx.fillStyle = COL.accent;
-          ctx.fill();
-        };
-      },
+            var nx = p.x / w,
+              ny = p.y / h;
+            var ang = noise.fbm(nx * 2.6, ny * 2.6 + tAcc * 0.1, 3) * Math.PI * 3.2;
+            var dx = p.x - vx0,
+              dy = p.y - vy0,
+              r2 = dx * dx + dy * dy;
+            var wgt = k / (k + r2);
+            var vortA = Math.atan2(dy, dx) + Math.PI / 2;
+            ang = ang * (1 - wgt * 0.85) + vortA * (wgt * 0.85);
+            var spd = Math.min(w, h) * (p.orange ? 0.62 : 0.46);
+            var vx = (Math.cos(ang) * 0.95 + 0.05) * spd;
+            var vy = (Math.sin(ang) * 0.95 - 0.14) * spd;
+            var px = p.x,
+              py = p.y;
+            p.x += vx * dt;
+            p.y += vy * dt;
+            p.age += dt;
 
-      // Work steps: a vertical spine with as many ticks as there
-      // are steps beside it, scanning down and looping.
-      scan: function () {
-        var ticks = 6;
-        return function (ctx, w, h, t) {
-          ctx.clearRect(0, 0, w, h);
-          var top = h * 0.08, bottom = h * 0.92, span = bottom - top;
-          var cx = w * 0.26;
-          ctx.strokeStyle = COL.rule;
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(cx, top);
-          ctx.lineTo(cx, bottom);
-          ctx.stroke();
-
-          var cycle = 4.2;
-          var phase = (t % cycle) / cycle;
-          var activeIdx = Math.floor(phase * ticks);
-
-          for (var i = 0; i < ticks; i++) {
-            var y = top + (i / (ticks - 1)) * span;
-            var on = i <= activeIdx;
-            var near = i === activeIdx;
+            var depthT = 1 - p.d;
+            var alpha = p.orange ? 0.24 : 0.045 + depthT * 0.13;
+            var lw = p.orange ? 1.3 : 0.5 + depthT * 0.65;
+            ctx.strokeStyle = p.orange ? rgba(ORANGE, alpha) : rgba(p.d > 0.66 ? GRAY : INK, alpha);
+            ctx.lineWidth = lw;
             ctx.beginPath();
-            ctx.arc(cx, y, near ? 4.2 : 3, 0, Math.PI * 2);
-            ctx.fillStyle = on ? COL.accent : COL.ground;
-            ctx.fill();
-            ctx.lineWidth = 1.2;
-            ctx.strokeStyle = on ? COL.accent : COL.soft;
+            ctx.moveTo(px, py);
+            ctx.lineTo(p.x, p.y);
             ctx.stroke();
 
-            ctx.strokeStyle = on ? COL.ink : COL.rule;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(cx + 12, y);
-            ctx.lineTo(cx + 12 + (on ? 34 : 20), y);
-            ctx.stroke();
-          }
-        };
-      },
-
-      // What I do: a loose grid of tracking pixels, one firing
-      // at a time.
-      pixels: function () {
-        var cols = 7, rows = 4, flashes = {}, nextSpawn = 0;
-        return function (ctx, w, h, t) {
-          ctx.clearRect(0, 0, w, h);
-          var padX = w * 0.06, padY = h * 0.14;
-          var gx = (w - padX * 2) / (cols - 1);
-          var gy = (h - padY * 2) / (rows - 1);
-
-          if (t > nextSpawn) {
-            nextSpawn = t + 0.16 + Math.random() * 0.3;
-            var key = Math.floor(Math.random() * rows) + "-" + Math.floor(Math.random() * cols);
-            flashes[key] = t;
-          }
-
-          for (var r = 0; r < rows; r++) {
-            for (var c = 0; c < cols; c++) {
-              var x = padX + c * gx, y = padY + r * gy;
-              var key2 = r + "-" + c;
-              var since = flashes[key2] !== undefined ? t - flashes[key2] : Infinity;
-              var lit = since >= 0 && since < 0.6;
-              var s = lit ? 1 - since / 0.6 : 0;
-              ctx.beginPath();
-              ctx.arc(x, y, 2 + s * 2.2, 0, Math.PI * 2);
-              ctx.fillStyle = lit ? COL.accent : COL.rule;
-              ctx.globalAlpha = lit ? 0.35 + s * 0.65 : 1;
-              ctx.fill();
-              ctx.globalAlpha = 1;
+            if (p.orange) {
+              p.drop += dt;
+              if (p.drop > 0.34) {
+                p.drop = 0;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+                ctx.fillStyle = rgba(ORANGE, 0.5);
+                ctx.fill();
+              }
             }
           }
         };
       },
 
-      // How I work: three nodes, a pulse relaying between them —
-      // the order matters.
-      sequence: function () {
-        return function (ctx, w, h, t) {
-          ctx.clearRect(0, 0, w, h);
-          var y = h * 0.5;
-          var xs = [w * 0.12, w * 0.5, w * 0.88];
-          ctx.strokeStyle = COL.rule;
-          ctx.lineWidth = 1.4;
-          ctx.beginPath();
-          ctx.moveTo(xs[0], y);
-          ctx.lineTo(xs[2], y);
-          ctx.stroke();
+      // Build steps — "Harmonograph": a damped four-term pendulum figure
+      // drawn as one continuous ink line, detuned so it never closes —
+      // tied to how far the reader has scrolled through the six build
+      // steps beside it, so descending the list literally draws the
+      // figure. A faint mis-registered orange second pass rides beside
+      // the main line. Holds, dissolves, and redraws from a curated set
+      // of parameter tuples.
+      harmonograph: function (seed) {
+        var rand = mulberry32(seed ^ 0x1234567);
+        var sets = [
+          [2.001, 3.004, 3.002, 2.007],
+          [3.003, 2.002, 4.001, 3.005],
+          [2.004, 5.002, 3.001, 2.003],
+          [4.002, 3.003, 2.005, 5.001],
+          [3.001, 4.004, 5.003, 2.002],
+          [2.006, 2.003, 4.005, 3.002]
+        ];
+        // Damping is tuned so the figure has fully wound down by tEnd —
+        // at the original harmonograph time-scale (d~0.002, tEnd~600+)
+        // the near-integer frequencies complete hundreds of overlapping
+        // revolutions before decaying, which plots as solid mud rather
+        // than a legible rosette. This range resolves in ~15-25 turns.
+        var dMain = [0.026, 0.031, 0.022, 0.036];
+        var dGhost = [dMain[0] * 0.6, dMain[1] * 0.6, dMain[2] * 0.6, dMain[3] * 0.6];
+        var setIdx = (rand() * sets.length) | 0;
+        var t = 0,
+          lastT = 0,
+          tEnd = 72;
+        var holding = false,
+          holdT = 0,
+          dissolving = false,
+          dissolveT = 0;
 
-          var cycle = 2.8;
-          var phase = (t % cycle) / cycle;
-          var travel = phase * (xs.length - 1);
-          var seg = Math.min(Math.floor(travel), xs.length - 2);
-          var segT = travel - seg;
-          var px = xs[seg] + (xs[seg + 1] - xs[seg]) * segT;
+        function penXY(f, phase, tt, w, h, damp) {
+          var A1 = 0.34 * w,
+            A2 = 0.16 * w,
+            A3 = 0.4 * h,
+            A4 = 0.18 * h;
+          var x =
+            A1 * Math.sin(f[0] * tt + phase) * Math.exp(-damp[0] * tt) +
+            A2 * Math.sin(f[1] * tt + phase + 1.3) * Math.exp(-damp[1] * tt);
+          var y =
+            A3 * Math.sin(f[2] * tt + phase + 2.1) * Math.exp(-damp[2] * tt) +
+            A4 * Math.sin(f[3] * tt + phase + 0.6) * Math.exp(-damp[3] * tt);
+          return [x + w * 0.42, y + h * 0.5];
+        }
 
-          for (var i = 0; i < xs.length; i++) {
-            ctx.beginPath();
-            ctx.arc(xs[i], y, 5, 0, Math.PI * 2);
-            ctx.fillStyle = COL.ground;
-            ctx.fill();
-            ctx.lineWidth = 1.4;
-            ctx.strokeStyle = COL.ink;
-            ctx.stroke();
+        return function (ctx, w, h, dt, cv) {
+          var f = sets[setIdx];
+
+          if (dissolving) {
+            fadeTrail(ctx, w, h, fadeAmt(0.85, dt));
+            dissolveT += dt;
+            if (dissolveT > 2.4) {
+              dissolving = false;
+              dissolveT = 0;
+              t = 0;
+              lastT = 0;
+              holding = false;
+              holdT = 0;
+              setIdx = (setIdx + 1) % sets.length;
+            }
+            return;
           }
-          ctx.beginPath();
-          ctx.arc(px, y, 3.6, 0, Math.PI * 2);
-          ctx.fillStyle = COL.accent;
-          ctx.fill();
+
+          var target = null;
+          if (!reduce && cv) {
+            var wrap = cv.closest(".steps-wrap");
+            if (wrap) {
+              var r = wrap.getBoundingClientRect();
+              var vh = window.innerHeight || 800;
+              var total = r.height + vh * 0.7;
+              var passed = vh * 0.92 - r.top;
+              target = clamp01(passed / total) * tEnd;
+            }
+          }
+          if (target !== null) {
+            t += (target - t) * Math.min(1, dt * 3.5);
+          } else {
+            t += dt * 2.6;
+          }
+          if (t >= tEnd) {
+            t = tEnd;
+            holding = true;
+          }
+
+          // Advance lastT by at most maxSpan per frame, sampled at a fixed
+          // fine step regardless of how big the backlog is — a sudden
+          // scroll jump (or the reduced-motion catch-up) then costs a
+          // few extra frames rather than a handful of coarse, low-alpha
+          // segments that read as a smear instead of a line.
+          var rawSpan = t - lastT;
+          if (rawSpan > 0.015) {
+            var span = Math.min(rawSpan, 3.2);
+            var subSteps = Math.min(48, Math.max(1, Math.ceil(span / 0.12)));
+            var stepSize = span / subSteps;
+            var tt = lastT;
+            var prevMain = penXY(f, 0, tt, w, h, dMain);
+            var prevGhost = penXY(f, 0.06, tt, w, h, dGhost);
+            for (var s = 0; s < subSteps; s++) {
+              tt += stepSize;
+              var curMain = penXY(f, 0, tt, w, h, dMain);
+              var segLen = Math.hypot(curMain[0] - prevMain[0], curMain[1] - prevMain[1]) + 3;
+              var a = Math.max(0.03, Math.min(0.22, 0.9 / segLen));
+              ctx.strokeStyle = rgba(INK, a);
+              ctx.lineWidth = 0.7;
+              ctx.beginPath();
+              ctx.moveTo(prevMain[0], prevMain[1]);
+              ctx.lineTo(curMain[0], curMain[1]);
+              ctx.stroke();
+              prevMain = curMain;
+
+              var curGhost = penXY(f, 0.06, tt, w, h, dGhost);
+              ctx.strokeStyle = rgba(ORANGE, 0.09);
+              ctx.lineWidth = 0.6;
+              ctx.beginPath();
+              ctx.moveTo(prevGhost[0], prevGhost[1]);
+              ctx.lineTo(curGhost[0], curGhost[1]);
+              ctx.stroke();
+              prevGhost = curGhost;
+            }
+            lastT += span;
+          }
+
+          if (holding) {
+            holdT += dt;
+            if (holdT > 5) dissolving = true;
+          }
         };
       },
 
-      // Contact: a quiet ping, three rings out from a center dot.
-      ping: function () {
-        return function (ctx, w, h, t) {
+      // "What I do" — "Isopleth": a domain-warped noise field read as
+      // contour lines, like topography. One level runs in orange and its
+      // topology drifts — splitting, merging, budding islands — as the
+      // field moves. A sparse fixed stipple stands in for hatch texture.
+      isopleth: function (seed) {
+        var noise = makeNoise2D(seed);
+        var t = mulberry32(seed ^ 7)() * 40;
+        var levels = [-0.3, -0.15, 0, 0.15, 0.3, 0.45];
+
+        return function (ctx, w, h, dt) {
+          if (!reduce) t += dt * 0.6;
           ctx.clearRect(0, 0, w, h);
-          var cx = w / 2, cy = h / 2, maxR = Math.min(w, h) * 0.42, cycle = 2.2;
-          for (var k = 0; k < 3; k++) {
-            var pt = ((((t + (k * cycle) / 3) % cycle) + cycle) % cycle) / cycle;
-            var r = Math.max(0, pt * maxR);
-            ctx.beginPath();
-            ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.strokeStyle = COL.accent;
-            ctx.globalAlpha = (1 - pt) * 0.55;
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            ctx.globalAlpha = 1;
+          var cell = 9;
+          var cols = Math.ceil(w / cell) + 1,
+            rows = Math.ceil(h / cell) + 1;
+          var field = new Float32Array(cols * rows);
+          for (var j = 0; j < rows; j++) {
+            for (var i = 0; i < cols; i++) {
+              var x = i * cell,
+                y = j * cell;
+              var q = noise.fbm(x * 0.01 + 100, y * 0.01 + t, 2, 2, 0.5);
+              field[j * cols + i] = noise.fbm(x * 0.01 + 2.4 * q, y * 0.01 + 2.4 * q + t, 3, 2, 0.5);
+            }
           }
-          ctx.beginPath();
-          ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-          ctx.fillStyle = COL.ink;
-          ctx.fill();
+          for (var li = 0; li < levels.length; li++) {
+            var level = levels[li];
+            var isMid = level === 0.15;
+            ctx.strokeStyle = isMid ? rgba(ORANGE, 0.5) : rgba(li > 2 ? INK : GRAY, 0.09 + (li / levels.length) * 0.11);
+            ctx.lineWidth = isMid ? 1.1 : 0.7;
+            marchContour(field, cols, rows, cell, level, ctx);
+          }
+          ctx.fillStyle = rgba(INK, 0.055);
+          for (var jj = 0; jj < rows; jj += 2) {
+            for (var ii = 0; ii < cols; ii += 2) {
+              if (field[jj * cols + ii] > 0.45) {
+                ctx.fillRect(ii * cell + (ii % 4 === 0 ? 1 : 3), jj * cell + (jj % 3 === 0 ? 2 : 4), 1, 1);
+              }
+            }
+          }
+        };
+      },
+
+      // "How I work" — "Chladni": a thousand grains of sand agitated by a
+      // standing wave, wandering until they settle on its nodal lines.
+      // Doesn't clear between frames — agitated grains smear into mist,
+      // settled ones hammer the same pixels into near-solid — so mist and
+      // crystal share one image. Morphs to the next mode pair on a slow
+      // curated cycle, dissolving into disorder mid-transition.
+      chladni: function (seed) {
+        var rand = mulberry32(seed ^ 0xabcdef);
+        var modePairs = [
+          [2, 7],
+          [3, 5],
+          [4, 9],
+          [1, 4],
+          [3, 8]
+        ];
+        var curIdx = 0,
+          nextIdx = 1,
+          morphing = false,
+          morphT = 0,
+          cycleT = 0;
+        var NP = 1000;
+        var pts = [];
+        for (var i = 0; i < NP; i++) pts.push({ x: rand(), y: rand(), settle: 0, orange: i < 46 });
+
+        function amp(u, v, n, m) {
+          return Math.sin(n * Math.PI * u) * Math.sin(m * Math.PI * v) - Math.sin(m * Math.PI * u) * Math.sin(n * Math.PI * v);
+        }
+
+        return function (ctx, w, h, dt) {
+          cycleT += dt;
+          if (!morphing && cycleT > 13) {
+            morphing = true;
+            morphT = 0;
+          }
+          var curM = modePairs[curIdx][0],
+            curN = modePairs[curIdx][1];
+          var mm = curM,
+            nn = curN;
+          if (morphing) {
+            morphT += dt;
+            var tt = Math.min(1, morphT / 2.4);
+            var tgt = modePairs[nextIdx];
+            mm = curM + (tgt[0] - curM) * tt;
+            nn = curN + (tgt[1] - curN) * tt;
+            if (tt >= 1) {
+              morphing = false;
+              cycleT = 0;
+              curIdx = nextIdx;
+              nextIdx = (nextIdx + 1) % modePairs.length;
+            }
+          }
+          fadeTrail(ctx, w, h, fadeAmt(0.55, dt));
+          for (var i = 0; i < pts.length; i++) {
+            var p = pts[i];
+            var a = Math.abs(amp(p.x, p.y, nn, mm));
+            var stepMag = Math.max(0.0016, Math.min(0.02, a * 0.022));
+            var ang = rand() * Math.PI * 2;
+            p.x = clamp01(p.x + Math.cos(ang) * stepMag);
+            p.y = clamp01(p.y + Math.sin(ang) * stepMag);
+            p.settle = p.settle * 0.98 + (1 - Math.min(1, a * 3)) * 0.02;
+            var px = p.x * w,
+              py = p.y * h;
+            ctx.fillStyle = p.orange ? rgba(ORANGE, 0.3) : rgba(INK, 0.12 + p.settle * 0.42);
+            ctx.fillRect(px, py, 1.2, 1.2);
+          }
+        };
+      },
+
+      // Contact — "Development": a de Jong strange attractor accumulating
+      // like a print coming up in a tray — never clears, only grows.
+      // Cropped and rotated so it bleeds off the frame rather than
+      // sitting centered. A live density grid tracks how many times each
+      // pixel has been hit; the ridges that cross a rising threshold —
+      // the attractor's own caustic folds — plot in orange, everything
+      // else stays graphite. Holds once fully developed, then dissolves
+      // and restarts from the next curated parameter set.
+      development: function (seed) {
+        var rand = mulberry32(seed ^ 0x55aa);
+        var sets = [
+          [1.641, 1.902, 0.316, 1.525],
+          [-2.0, -2.0, -1.2, 2.0],
+          [1.4, 1.56, 1.4, -6.56]
+        ];
+        var idx = (rand() * sets.length) | 0;
+        var x = 0.1,
+          y = 0.1;
+        var pointsPlotted = 0;
+        var phase = "develop";
+        var holdT = 0,
+          dissolveT = 0;
+        var density = null,
+          densCols = 0,
+          densRows = 0;
+        var TARGET_POINTS = 1200000;
+
+        function ensureDensity(w, h) {
+          var c = Math.max(1, Math.ceil(w / 2)),
+            r = Math.max(1, Math.ceil(h / 2));
+          if (c !== densCols || r !== densRows) {
+            densCols = c;
+            densRows = r;
+            density = new Uint16Array(c * r);
+          }
+        }
+
+        return function (ctx, w, h, dt) {
+          ensureDensity(w, h);
+          var a = sets[idx][0],
+            b = sets[idx][1],
+            c = sets[idx][2],
+            d = sets[idx][3];
+
+          if (phase === "dissolve") {
+            fadeTrail(ctx, w, h, fadeAmt(0.9, dt));
+            dissolveT += dt;
+            if (dissolveT > 2.6) {
+              phase = "develop";
+              dissolveT = 0;
+              pointsPlotted = 0;
+              x = 0.1;
+              y = 0.1;
+              density.fill(0);
+              idx = (idx + 1) % sets.length;
+            }
+            return;
+          }
+          if (phase === "hold") {
+            holdT += dt;
+            if (holdT > 9) {
+              phase = "dissolve";
+              dissolveT = 0;
+            }
+            return;
+          }
+
+          var iters = 2500;
+          var scale = Math.min(w, h) / 2.7;
+          var cx = w * 0.42,
+            cy = h * 0.48;
+          var rot = (-7 * Math.PI) / 180,
+            cosr = Math.cos(rot),
+            sinr = Math.sin(rot);
+          var T = 30 + pointsPlotted / 8000;
+          for (var i = 0; i < iters; i++) {
+            var nx = Math.sin(a * y) - Math.cos(b * x);
+            var ny = Math.sin(c * x) - Math.cos(d * y);
+            x = nx;
+            y = ny;
+            var sx = x * scale,
+              sy = y * scale;
+            var rx = sx * cosr - sy * sinr,
+              ry = sx * sinr + sy * cosr;
+            var px = cx + rx,
+              py = cy + ry;
+            if (px < 0 || px >= w || py < 0 || py >= h) continue;
+            var gi = ((py / 2) | 0) * densCols + ((px / 2) | 0);
+            var cnt = ++density[gi];
+            pointsPlotted++;
+            ctx.fillStyle = cnt > T ? "rgba(226,102,31,0.020)" : "rgba(17,17,17,0.012)";
+            ctx.fillRect(px, py, 0.9, 0.9);
+          }
+          if (pointsPlotted > TARGET_POINTS) {
+            phase = "hold";
+            holdT = 0;
+          }
         };
       }
     };
 
-    [].forEach.call(nodes, function (cv) {
-      var make = sketches[cv.dataset.graphic];
+    // Per-sketch frame budgets for the two synchronous passes: `warmup`
+    // runs once, silently, the moment a canvas first scrolls into view
+    // (so the reader never watches an empty box fill from nothing);
+    // `reduced` runs once at load in place of any animation at all,
+    // standing in for prefers-reduced-motion. Harmonograph gets no
+    // warmup — its build-up IS the scroll-linked reveal, and pre-filling
+    // it would spoil the one piece that responds to the reader directly.
+    var CFG = {
+      filament: { warmup: 70, reduced: 400 },
+      harmonograph: { warmup: 0, reduced: 1500 },
+      isopleth: { warmup: 6, reduced: 6 },
+      chladni: { warmup: 70, reduced: 150 },
+      development: { warmup: 60, reduced: 130 }
+    };
+
+    [].forEach.call(nodes, function (cv, idx) {
+      var kind = cv.dataset.graphic;
+      var make = sketches[kind];
       if (!make) return;
 
       function size() {
         var dpr = Math.min(window.devicePixelRatio || 1, 2);
-        var w = cv.clientWidth, h = cv.clientHeight;
+        var w = cv.clientWidth,
+          h = cv.clientHeight;
         if (!w || !h) return null;
         cv.width = Math.round(w * dpr);
         cv.height = Math.round(h * dpr);
@@ -489,30 +922,47 @@
 
       var dims = size();
       if (!dims) return;
-      var frame = make();
+
+      var seed = (hashStr(kind) ^ Math.imul(idx + 1, 2654435761)) >>> 0;
+      var frame = make(seed);
+      var cfg = CFG[kind] || { warmup: 0, reduced: 1 };
 
       if (reduce) {
-        frame(dims.ctx, dims.w, dims.h, 0);
+        for (var s = 0; s < cfg.reduced; s++) frame(dims.ctx, dims.w, dims.h, 1 / 60, cv);
+        cv.classList.add("ready");
         return;
       }
 
-      var visible = true;
-      if ("IntersectionObserver" in window) {
+      var hasIO = "IntersectionObserver" in window;
+      var visible = !hasIO;
+      var warmed = !hasIO;
+
+      function warmUp() {
+        for (var s2 = 0; s2 < cfg.warmup; s2++) frame(dims.ctx, dims.w, dims.h, 1 / 60, cv);
+        cv.classList.add("ready");
+      }
+
+      if (!hasIO) {
+        warmUp();
+      } else {
         new IntersectionObserver(
           function (entries) {
             visible = entries[0].isIntersecting;
+            if (visible && !warmed) {
+              warmed = true;
+              warmUp();
+            }
           },
-          { threshold: 0 }
+          { threshold: 0, rootMargin: "120px" }
         ).observe(cv);
       }
 
-      // t0 is set from the first rAF timestamp itself, not a separately
-      // sampled performance.now() — mixing the two clocks let the very
-      // first delta go slightly negative in some browsers.
-      var t0 = null;
+      var last = null;
       requestAnimationFrame(function loop(ts) {
-        if (t0 === null) t0 = ts;
-        if (visible) frame(dims.ctx, dims.w, dims.h, Math.max(0, (ts - t0) / 1000));
+        if (last === null) last = ts;
+        var dt = Math.min(0.05, Math.max(0, (ts - last) / 1000));
+        last = ts;
+        if (visible && warmed) frame(dims.ctx, dims.w, dims.h, dt, cv);
         requestAnimationFrame(loop);
       });
 
