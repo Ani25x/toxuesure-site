@@ -16,6 +16,9 @@
   --text:Archivo,-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
   --pad:clamp(22px,6vw,120px);
   --ease:cubic-bezier(.22,.61,.36,1);
+  /* content edge → viewport edge. 100vw includes the scrollbar, so this
+     over-reports slightly; every consumer below floors well under it. */
+  --gutter:calc((100vw - min(1180px,100vw))/2 + var(--pad));
 }
 
 *{box-sizing:border-box}
@@ -55,7 +58,12 @@ a.u,.mast nav a,.meta a,.tag.link{
 /* ─── hero ─────────────────────────────────────────────── */
 .hero{
   padding:clamp(70px,14vh,180px) 0 clamp(58px,10vh,132px);
-  display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,200px);
+  /* 200px, not minmax(150px,200px): the graphic canvas below is
+     position:absolute (it bleeds past this column on purpose), so it no
+     longer contributes intrinsic width to the track — a minmax here would
+     collapse to its floor and hand the freed width back to the h1's text
+     column, reflowing the hand-broken lines. Pin it instead. */
+  display:grid;grid-template-columns:minmax(0,1fr) 200px;
   gap:clamp(24px,4vw,44px);align-items:start;
 }
 h1{
@@ -84,7 +92,17 @@ section{padding:0 0 clamp(52px,8vw,104px)}
   letter-spacing:.13em;text-transform:uppercase;color:var(--soft);
   margin:clamp(40px,6vw,72px) 0 clamp(26px,4vw,44px);
 }
-.label.sticky{position:sticky;top:20px;z-index:2;background:var(--ground);padding-block:6px}
+.label.sticky{position:sticky;top:20px;z-index:2;padding-block:6px}
+/* The label only spans .wrap's content width, but the services/approach
+   canvases now bleed into the margins beside it — without this, the
+   bled portion would show through above the label as a mismatched band
+   as it scrolls underneath. Extend the same ground colour past the
+   label's own box, behind its text (z-index:-1, but still inside this
+   element's own z-index:2 stacking context, so it stays above the art). */
+.label.sticky::before{
+  content:"";position:absolute;top:0;bottom:0;left:-50vw;right:-50vw;
+  background:var(--ground);z-index:-1;
+}
 
 .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.55fr);gap:clamp(24px,5vw,72px)}
 h2{font-family:var(--display);font-weight:500;font-size:clamp(23px,2.9vw,36px);line-height:1.2;letter-spacing:-.03em;margin:0;max-width:17ch}
@@ -121,7 +139,10 @@ p:last-child{margin-bottom:0}
 .fig.in .n em{transform:translateY(0)}
 .fig .k{display:block;margin-top:11px;font-size:14px;color:var(--soft);max-width:24ch;line-height:1.4}
 
-.steps-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(200px,320px);gap:clamp(24px,4vw,56px);align-items:start;margin-top:clamp(40px,6vw,60px)}
+/* 300px, not minmax(200px,320px) — same reasoning as .hero above: the
+   work-graphic canvas is now position:absolute and bleeds past this
+   column, so the track must be pinned rather than sized to content. */
+.steps-wrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:clamp(24px,4vw,56px);align-items:start;margin-top:clamp(40px,6vw,60px)}
 .steps{display:grid;gap:clamp(24px,3vw,34px)}
 .step{display:grid;grid-template-columns:52px minmax(0,1fr);gap:clamp(14px,2vw,26px);align-items:start}
 .step .idx{font-family:var(--display);font-size:12.5px;font-weight:500;color:var(--soft);padding-top:4px}
@@ -151,63 +172,93 @@ p:last-child{margin-bottom:0}
 .stage p{color:var(--soft);max-width:38ch}
 
 /* ─── generative graphics ─────────────────────────────────
-   No frame, no fill: each canvas is masked with a soft
-   radial falloff so the art dissolves into the page instead
-   of being clipped by a rectangle. The canvas is already
-   transparent (fadeTrail erases with destination-out), so
-   the ground colour underneath it was doing nothing anyway.
-   Mask geometry is tuned per sketch to protect each
-   composition's focal point — see the notes on each rule.
-   Hidden below 820px where there's no room to spare. */
+   Round 2 removed the visible box (border/background) but the art was
+   still confined to it — a soft-edged small box is still a small box.
+   Round 3: each canvas now bleeds past its own container via absolute
+   inset custom properties (--bt/--br/--bb/--bl), into the section's own
+   whitespace and the page's outer margin, while the container itself
+   stays exactly where it was in the grid so text layout is untouched.
+   The mask is now a thin uniform dissolve rind (66-84% opaque core) —
+   composition-level freedom (drifting centres, over-scanned crops,
+   figures that bleed past their own frame) lives in main.js now, not
+   in an off-centre gradient doing the art's job for it. Hidden below
+   820px; hero hidden below 1180px — both unchanged, see the media
+   queries at the bottom of this file for why. */
+.hero-graphic,.work-graphic,.services-graphic,
+.approach-graphic,.contact-graphic{
+  position:relative;z-index:0;pointer-events:none;
+  --bt:0px;--br:0px;--bb:0px;--bl:0px;
+}
 .hero-graphic canvas,.work-graphic canvas,.services-graphic canvas,
 .approach-graphic canvas,.contact-graphic canvas{
-  display:block;width:100%;height:100%;
+  display:block;position:absolute;
+  top:calc(-1 * var(--bt));right:calc(-1 * var(--br));
+  bottom:calc(-1 * var(--bb));left:calc(-1 * var(--bl));
+  width:auto;height:auto;
   opacity:0;transition:opacity .6s var(--ease);
   -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  -webkit-mask-image:radial-gradient(ellipse closest-side at 50% 50%,#000 var(--core,70%),transparent 100%);
+          mask-image:radial-gradient(ellipse closest-side at 50% 50%,#000 var(--core,70%),transparent 100%);
 }
 canvas[data-graphic].ready{opacity:1}
 
-/* Filament — mask centred on the vortex knot (38%/42%), not the box.
-   closest-side pins the falloff to exactly zero at the near edges. */
-canvas[data-graphic="filament"]{
-  -webkit-mask-image:radial-gradient(ellipse closest-side at 40% 46%,#000 44%,transparent 100%);
-          mask-image:radial-gradient(ellipse closest-side at 40% 46%,#000 44%,transparent 100%);
+canvas[data-graphic="filament"]    {--core:66%}
+canvas[data-graphic="harmonograph"]{--core:70%}
+canvas[data-graphic="isopleth"]    {--core:84%}
+canvas[data-graphic="chladni"]     {--core:72%}
+canvas[data-graphic="development"] {--core:74%}
+
+.hero-graphic{
+  height:clamp(260px,30vw,440px);
+  --bt:clamp(30px,5.5vw,78px);
+  --br:clamp(40px,calc(var(--gutter) - 28px),240px);
+  --bb:clamp(24px,4.5vw,64px);
+  /* --bl stays 0: the h1 ink sits directly to the left with only a
+     44px gap at its narrowest — never bleed toward it. */
 }
-/* Harmonograph — pulled in to match the tightened pen amplitudes: the
-   rosette's faintest outermost sweeps are now the only part that dissolves. */
-canvas[data-graphic="harmonograph"]{
-  -webkit-mask-image:radial-gradient(ellipse closest-side at 42% 50%,#000 52%,transparent 100%);
-          mask-image:radial-gradient(ellipse closest-side at 42% 50%,#000 52%,transparent 100%);
+.work-graphic{
+  position:sticky;top:100px;
+  height:min(clamp(320px,36vw,500px),62vh);
+  --bt:clamp(20px,3vw,44px);
+  --br:clamp(40px,calc(var(--gutter) - 28px),260px);
+  --bb:clamp(24px,3.6vw,52px);
+  --bl:clamp(0px,3vw,44px);
 }
-/* Isopleth — largest opaque core of the five (72%), so it keeps reading as
-   a fragment of a bigger map rather than a vignetted picture of one. */
-canvas[data-graphic="isopleth"]{
-  -webkit-mask-image:radial-gradient(ellipse closest-side at 48% 50%,#000 72%,transparent 100%);
-          mask-image:radial-gradient(ellipse closest-side at 48% 50%,#000 72%,transparent 100%);
+.services-graphic{
+  height:clamp(220px,26vw,360px);
+  --bt:clamp(16px,2.5vw,36px);
+  --br:clamp(0px,3.5vw,50px);
+  --bb:clamp(30px,10vw,144px);
+  --bl:clamp(40px,calc(var(--gutter) - 28px),240px);
 }
-/* Chladni — a true circle, not an ellipse: the plate reads as a round
-   Chladni disc, and the square plate's own boundary (which is itself a
-   nodal line, and does attract grains) falls outside the mask entirely. */
-canvas[data-graphic="chladni"]{
-  -webkit-mask-image:radial-gradient(circle closest-side at 50% 50%,#000 68%,transparent 100%);
-          mask-image:radial-gradient(circle closest-side at 50% 50%,#000 68%,transparent 100%);
+.approach-graphic{
+  height:clamp(260px,30vw,420px);
+  --bt:clamp(16px,2.5vw,36px);
+  --bb:clamp(24px,6vw,86px);
+  --bl:clamp(40px,calc(var(--gutter) - 40px),180px);
+  /* --br stays 0: keeps the plate close to 1:1 rather than stretching it
+     toward the text column. */
 }
-/* Development — offset to match the attractor's own centre (44%/47%) so the
-   soft edge lands on the caustics rather than slicing the dense core. */
-canvas[data-graphic="development"]{
-  -webkit-mask-image:radial-gradient(ellipse closest-side at 44% 47%,#000 60%,transparent 100%);
-          mask-image:radial-gradient(ellipse closest-side at 44% 47%,#000 60%,transparent 100%);
+.contact-graphic{
+  height:clamp(220px,25vw,340px);
+  --bt:clamp(20px,3vw,44px);
+  --br:clamp(40px,calc(var(--gutter) - 28px),240px);
+  --bb:clamp(30px,6vw,86px);
+  --bl:clamp(0px,3.5vw,50px);
 }
 
-/* Sizes diverge on purpose: a tall slender column for the filament, a
-   near-square plate for the Chladni, a landscape sheet for the contour map. */
-.hero-graphic{height:clamp(260px,30vw,440px)}
-.work-graphic{position:sticky;top:100px;height:clamp(320px,34vw,460px)}
-.services-graphic{height:clamp(200px,22vw,290px)}
-.approach-graphic{height:clamp(240px,26vw,350px)}
-.contact-graphic{height:clamp(190px,21vw,280px)}
+/* The GSAP reveal (main.js) leaves an inline transform on every .r
+   element, which makes each one its own stacking context at effective
+   z-index 0 — so DOM order alone would decide whether a bled canvas
+   paints over or under its text siblings. Pin the text content above
+   the art explicitly rather than leaving that to source order. */
+.mast,.hero-copy,.case-head,.figs,.steps,.stack,.note,.contact-copy{
+  position:relative;z-index:1;
+}
 
-.contact-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,240px);gap:clamp(24px,5vw,60px);align-items:center}
+/* 240px, not minmax(160px,240px) — same reasoning: the contact-graphic
+   canvas is position:absolute now and bleeds past this column. */
+.contact-grid{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:clamp(24px,5vw,60px);align-items:center}
 
 /* ─── contact ──────────────────────────────────────────── */
 .contact .big{
@@ -277,6 +328,7 @@ footer{
   .cols{grid-template-columns:1fr;gap:26px}
   h2{max-width:22ch}
   .label.sticky{position:static}
+  .label.sticky::before{display:none}
   .shot{order:2}
   .steps-wrap{grid-template-columns:1fr}
   .contact-grid{grid-template-columns:1fr}

@@ -75,8 +75,13 @@
 
     // Everything else with a plain .r that isn't inside one of the
     // grouped containers above (case head, ledes, note, contact block).
+    // The generative-graphic containers get their own, later trigger:
+    // they now bleed past their section's usual reveal point, so firing
+    // at the text's "top 90%" would reveal an empty/half-drawn canvas.
+    var graphicSel = ".hero-graphic,.work-graphic,.services-graphic,.approach-graphic,.contact-graphic";
     document.querySelectorAll(".r").forEach(function (el) {
       if (el.closest(".hero") || el.closest(groups.join(","))) return;
+      var isGraphic = el.matches(graphicSel);
       gsap.fromTo(
         el,
         { opacity: 0, y: 14 },
@@ -85,7 +90,7 @@
           y: 0,
           duration: 0.62,
           ease: "power2.out",
-          scrollTrigger: { trigger: el, start: "top 90%" }
+          scrollTrigger: { trigger: el, start: isGraphic ? "top 97%" : "top 90%" }
         }
       );
     });
@@ -476,11 +481,15 @@
       filament: function (seed) {
         var noise = makeNoise2D(seed);
         var rand = mulberry32(seed ^ 0x9e3779b9);
-        var N = 90;
+        var N = 150;
         var particles = [];
         function respawn(p, w, h) {
-          p.x = rand() * w * 0.4;
-          p.y = h * (0.4 + rand() * 0.6);
+          // Emitter straddles the left/bottom edges rather than sitting
+          // neatly inside them — with the canvas now bleeding past its
+          // own column, particles should already be arriving from
+          // off-frame rather than only ever being born on-screen.
+          p.x = rand() * w * 0.55 - w * 0.08;
+          p.y = h * (0.28 + rand() * 0.82);
           p.age = 0;
           p.life = 3.6 + rand() * 3.2;
         }
@@ -496,12 +505,23 @@
         return function (ctx, w, h, dt) {
           tAcc += dt;
           fadeTrail(ctx, w, h, fadeAmt(2.8, dt));
-          var vx0 = 0.38 * w,
-            vy0 = 0.42 * h;
+          // The vortex knot drifts on two incommensurate periods (146s,
+          // 203s) rather than sitting pinned at one fixed point forever —
+          // a piece that runs continuously and never resets needs a
+          // moving centre or "free" just means "slow forever."
+          var vx0 = w * (0.38 + 0.1 * Math.sin(tAcc * 0.043)),
+            vy0 = h * (0.42 + 0.08 * Math.cos(tAcc * 0.031));
           var k = Math.pow(0.3 * h, 2) || 1;
+          // A generous margin, not a hard ±10px wall: the canvas clips
+          // regardless (its own bitmap edge), so this only changes when a
+          // particle recycles — now it drifts out past the visible frame
+          // and is gone, rather than snapping back the instant it grazes
+          // the edge, which read as a wall even after the box lost its
+          // visible border.
+          var M = Math.min(w, h) * 0.35;
           for (var i = 0; i < particles.length; i++) {
             var p = particles[i];
-            if (p.x === undefined || p.age > p.life || p.x < -10 || p.x > w + 10 || p.y < -10 || p.y > h + 10) {
+            if (p.x === undefined || p.age > p.life || p.x < -M || p.x > w + M || p.y < -M || p.y > h + M) {
               respawn(p, w, h);
             }
             var nx = p.x / w,
@@ -524,7 +544,12 @@
 
             var depthT = 1 - p.d;
             var alpha = p.orange ? 0.24 : 0.045 + depthT * 0.13;
-            var lw = p.orange ? 1.3 : 0.5 + depthT * 0.65;
+            // Stroke weight is the one thing here that didn't already key
+            // off w/h — in a box 2-3x its old size the lines would go
+            // visibly thinner without this. sc=1 reproduces the old box's
+            // weight exactly; sc=1.5 at the new hero size.
+            var sc = Math.max(1, Math.min(w, h) / 260);
+            var lw = (p.orange ? 1.3 : 0.5 + depthT * 0.65) * sc;
             ctx.strokeStyle = p.orange ? rgba(ORANGE, alpha) : rgba(p.d > 0.66 ? GRAY : INK, alpha);
             ctx.lineWidth = lw;
             ctx.beginPath();
@@ -579,18 +604,34 @@
           dissolving = false,
           dissolveT = 0;
 
-        function penXY(f, phase, tt, w, h, damp) {
-          var A1 = 0.29 * w,
-            A2 = 0.14 * w,
-            A3 = 0.33 * h,
-            A4 = 0.15 * h;
+        // One centre per parameter set, so consecutive takes don't stack
+        // on the same spot — a small recompose rather than the same
+        // figure redrawn dead-centre every 18 seconds forever.
+        var centers = [
+          [0.44, 0.5],
+          [0.52, 0.44],
+          [0.38, 0.55],
+          [0.5, 0.53],
+          [0.42, 0.46],
+          [0.55, 0.51]
+        ];
+
+        function penXY(f, phase, tt, w, h, damp, c) {
+          // Amplitudes now reach ~0.59w from centre at peak (early,
+          // undamped sweeps) — the figure is allowed to run past its own
+          // frame while loud and resolve back inside as it decays, rather
+          // than being scaled to fit entirely within the box at all times.
+          var A1 = 0.4 * w,
+            A2 = 0.19 * w,
+            A3 = 0.44 * h,
+            A4 = 0.2 * h;
           var x =
             A1 * Math.sin(f[0] * tt + phase) * Math.exp(-damp[0] * tt) +
             A2 * Math.sin(f[1] * tt + phase + 1.3) * Math.exp(-damp[1] * tt);
           var y =
             A3 * Math.sin(f[2] * tt + phase + 2.1) * Math.exp(-damp[2] * tt) +
             A4 * Math.sin(f[3] * tt + phase + 0.6) * Math.exp(-damp[3] * tt);
-          return [x + w * 0.42, y + h * 0.5];
+          return [x + w * c[0], y + h * c[1]];
         }
 
         return function (ctx, w, h, dt, cv) {
@@ -639,26 +680,27 @@
           // segments that read as a smear instead of a line.
           var rawSpan = t - lastT;
           if (rawSpan > 0.015) {
+            var c = centers[setIdx];
             var span = Math.min(rawSpan, 3.2);
             var subSteps = Math.min(48, Math.max(1, Math.ceil(span / 0.12)));
             var stepSize = span / subSteps;
             var tt = lastT;
-            var prevMain = penXY(f, 0, tt, w, h, dMain);
-            var prevGhost = penXY(f, 0.06, tt, w, h, dGhost);
+            var prevMain = penXY(f, 0, tt, w, h, dMain, c);
+            var prevGhost = penXY(f, 0.06, tt, w, h, dGhost, c);
             for (var s = 0; s < subSteps; s++) {
               tt += stepSize;
-              var curMain = penXY(f, 0, tt, w, h, dMain);
+              var curMain = penXY(f, 0, tt, w, h, dMain, c);
               var segLen = Math.hypot(curMain[0] - prevMain[0], curMain[1] - prevMain[1]) + 3;
               var a = Math.max(0.03, Math.min(0.22, 0.9 / segLen));
               ctx.strokeStyle = rgba(INK, a);
-              ctx.lineWidth = 0.7;
+              ctx.lineWidth = 0.8;
               ctx.beginPath();
               ctx.moveTo(prevMain[0], prevMain[1]);
               ctx.lineTo(curMain[0], curMain[1]);
               ctx.stroke();
               prevMain = curMain;
 
-              var curGhost = penXY(f, 0.06, tt, w, h, dGhost);
+              var curGhost = penXY(f, 0.06, tt, w, h, dGhost, c);
               ctx.strokeStyle = rgba(ORANGE, 0.09);
               ctx.lineWidth = 0.6;
               ctx.beginPath();
@@ -685,25 +727,44 @@
         var noise = makeNoise2D(seed);
         var t = mulberry32(seed ^ 7)() * 40;
         var levels = [-0.3, -0.15, 0, 0.15, 0.3, 0.45];
+        // Density field lives in the closure now, not reallocated every
+        // frame — only rebuilt when the canvas itself changes size.
+        var field = null,
+          fCols = 0,
+          fRows = 0;
+        // The accent contour migrates slowly through the level set instead
+        // of always sitting on the same isoline, so the orange thread
+        // itself keeps recomposing rather than tracing a fixed groove.
+        var oIdx = 3,
+          oT = 0;
 
         return function (ctx, w, h, dt) {
-          if (!reduce) t += dt * 0.6;
+          if (!reduce) t += dt * 0.45;
           ctx.clearRect(0, 0, w, h);
-          var cell = 9;
+          var cell = 10;
           var cols = Math.ceil(w / cell) + 1,
             rows = Math.ceil(h / cell) + 1;
-          var field = new Float32Array(cols * rows);
+          if (cols !== fCols || rows !== fRows) {
+            fCols = cols;
+            fRows = rows;
+            field = new Float32Array(cols * rows);
+          }
           for (var j = 0; j < rows; j++) {
             for (var i = 0; i < cols; i++) {
               var x = i * cell,
                 y = j * cell;
-              var q = noise.fbm(x * 0.01 + 100, y * 0.01 + t, 2, 2, 0.5);
-              field[j * cols + i] = noise.fbm(x * 0.01 + 2.4 * q, y * 0.01 + 2.4 * q + t, 3, 2, 0.5);
+              var q = noise.fbm(x * 0.0075 + 100, y * 0.0075 + t, 2, 2, 0.5);
+              field[j * cols + i] = noise.fbm(x * 0.0075 + 2.4 * q, y * 0.0075 + 2.4 * q + t, 3, 2, 0.5);
             }
+          }
+          oT += dt;
+          if (oT > 17) {
+            oT = 0;
+            oIdx = (oIdx + 1) % levels.length;
           }
           for (var li = 0; li < levels.length; li++) {
             var level = levels[li];
-            var isMid = level === 0.15;
+            var isMid = li === oIdx;
             ctx.strokeStyle = isMid ? rgba(ORANGE, 0.5) : rgba(li > 2 ? INK : GRAY, 0.09 + (li / levels.length) * 0.11);
             ctx.lineWidth = isMid ? 1.1 : 0.7;
             marchContour(field, cols, rows, cell, level, ctx);
@@ -747,11 +808,12 @@
           morphT = 0,
           cycleT = 0,
           heat = 1,
-          stepAcc = 0;
+          stepAcc = 0,
+          driftT = 0;
 
-        var NP = 1400, // total grains
-          N_ORANGE = 40, // accent grains, seeded as one cluster
-          EDGE = 0.022, // keep grains off the plate rim
+        var NP = 1900, // total grains
+          N_ORANGE = 55, // accent grains, seeded as one cluster
+          EDGE = 0.012, // keep grains off the plate rim
           SPAN = 1 - EDGE * 2,
           MIN_STEP = 0.0018, // sets the settled line width
           MAX_STEP = 0.03, // how fast a loud-region grain travels
@@ -828,8 +890,17 @@
           // it in whole steps, cap the catch-up after a stall or a tab swap.
           stepAcc += dt * WALK_HZ;
           var nSteps = stepAcc | 0;
-          if (nSteps > 4) nSteps = 4;
+          if (nSteps > 3) nSteps = 3;
           stepAcc -= nSteps;
+
+          // Slow pan-and-overscan: the plate is drawn zoomed in a little
+          // past its own edges and the zoom window drifts, so the frame
+          // is always cropping a moving plate rather than showing the
+          // whole bounded square dead-center.
+          driftT += dt;
+          var OS = 1.26,
+            cxo = 0.5 + 0.055 * Math.sin(driftT * 0.037),
+            cyo = 0.5 + 0.045 * Math.cos(driftT * 0.029);
 
           // Long memory while the figure holds (settled grains hammer the
           // same pixel to near-solid ink); short memory while hot, so the
@@ -878,8 +949,10 @@
             var calmT = 1 - Math.min(1, a0 / 0.18);
             p.calm += (calmT - p.calm) * Math.min(1, dt * 7);
             var c = p.calm * p.calm;
-            var px = Math.round(p.x * w * dpr) * q,
-              py = Math.round(p.y * h * dpr) * q;
+            var sx = (p.x - cxo) * OS + 0.5,
+              sy = (p.y - cyo) * OS + 0.5;
+            var px = Math.round(sx * w * dpr) * q,
+              py = Math.round(sy * h * dpr) * q;
 
             if (p.orange) {
               if (c > 0.15) {
@@ -919,7 +992,14 @@
         var density = null,
           densCols = 0,
           densRows = 0;
-        var TARGET_POINTS = 1200000;
+        var TARGET_POINTS = 1900000;
+        // Curated crop/rotation per parameter set, so each take recomposes
+        // instead of always centering the same attractor the same way.
+        var frames = [
+          [0.42, 0.48, -7],
+          [0.56, 0.44, 11],
+          [0.38, 0.55, -19]
+        ];
 
         function ensureDensity(w, h) {
           var c = Math.max(1, Math.ceil(w / 2)),
@@ -961,14 +1041,22 @@
             return;
           }
 
-          var iters = 2500;
+          var iters = reduce ? 2200 : 4000;
+          var A_INK = reduce ? 0.030 : 0.020,
+            A_ORG = reduce ? 0.045 : 0.030;
           var scale = Math.min(w, h) / 2.7;
-          var cx = w * 0.42,
-            cy = h * 0.48;
-          var rot = (-7 * Math.PI) / 180,
+          var frm = frames[idx];
+          var cx = w * frm[0],
+            cy = h * frm[1];
+          var rot = (frm[2] * Math.PI) / 180,
             cosr = Math.cos(rot),
             sinr = Math.sin(rot);
-          var T = 30 + pointsPlotted / 8000;
+          // Threshold as a multiple of the mean hit-count so far, not a
+          // fixed count against a raw point tally — the old formula only
+          // held together at the point budget it was tuned for, and would
+          // have starved the orange caustic entirely at the larger budget.
+          var mean = pointsPlotted / (densCols * densRows);
+          var T = 12 + mean * 3.2;
           for (var i = 0; i < iters; i++) {
             var nx = Math.sin(a * y) - Math.cos(b * x);
             var ny = Math.sin(c * x) - Math.cos(d * y);
@@ -984,7 +1072,7 @@
             var gi = ((py / 2) | 0) * densCols + ((px / 2) | 0);
             var cnt = ++density[gi];
             pointsPlotted++;
-            ctx.fillStyle = cnt > T ? "rgba(226,102,31,0.020)" : "rgba(17,17,17,0.012)";
+            ctx.fillStyle = cnt > T ? rgba(ORANGE, A_ORG) : rgba(INK, A_INK);
             ctx.fillRect(px, py, 0.9, 0.9);
           }
           if (pointsPlotted > TARGET_POINTS) {
@@ -1006,7 +1094,7 @@
       filament: { warmup: 70, reduced: 400 },
       harmonograph: { warmup: 0, reduced: 1500 },
       isopleth: { warmup: 6, reduced: 6 },
-      chladni: { warmup: 110, reduced: 190 },
+      chladni: { warmup: 170, reduced: 190 },
       development: { warmup: 60, reduced: 130 }
     };
 
@@ -1015,19 +1103,27 @@
       var make = sketches[kind];
       if (!make) return;
 
-      function size() {
+      function size(force) {
         var dpr = Math.min(window.devicePixelRatio || 1, 2);
         var w = cv.clientWidth,
           h = cv.clientHeight;
         if (!w || !h) return null;
-        cv.width = Math.round(w * dpr);
-        cv.height = Math.round(h * dpr);
+        var pw = Math.round(w * dpr),
+          ph = Math.round(h * dpr);
+        // Reassigning cv.width/height always wipes the canvas, even to the
+        // same value — so a same-size resize event (e.g. a mobile browser
+        // chrome show/hide) would otherwise silently erase an
+        // accumulating sketch's progress. Only resize the backing store
+        // when the pixel dimensions actually changed.
+        if (!force && pw === cv.width && ph === cv.height) return null;
+        cv.width = pw;
+        cv.height = ph;
         var ctx = cv.getContext("2d");
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         return { ctx: ctx, w: w, h: h };
       }
 
-      var dims = size();
+      var dims = size(true);
       if (!dims) return;
 
       var seed = (hashStr(kind) ^ Math.imul(idx + 1, 2654435761)) >>> 0;
