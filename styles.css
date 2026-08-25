@@ -206,7 +206,7 @@ p:last-child{margin-bottom:0}
 }
 canvas[data-graphic].ready{opacity:1}
 
-canvas[data-graphic="stack"]       {--core:82%}
+canvas[data-graphic="section"]     {--core:82%}
 canvas[data-graphic="harmonograph"]{--core:70%}
 canvas[data-graphic="isopleth"]    {--core:84%}
 canvas[data-graphic="fork"]        {--core:84%}

@@ -474,146 +474,114 @@
     // multiple instances never share memory. dt is real elapsed seconds
     // since the previous call (already clamped by the caller).
     var sketches = {
-      // Hero — "Stack": the headline drawn rather than decorated. Three
-      // strata, top to bottom: spend crossing above, the store as
-      // structure in the middle, measurement running underneath. Each
-      // event falls out of the spend layer, through a gap in the store,
-      // and — only if the tracking below is wired up — lands on the
-      // baseline as a recorded tick. The rest dissolve in the gap between
-      // the two: the sale happened, nothing caught it. That caught-share
-      // breathes on a slow cycle, so the piece keeps moving between a
-      // leaky measurement layer and a sound one rather than asserting
-      // either. Orange is only ever *recorded* revenue — which is the
-      // distinction the whole page is arguing about.
-      stack: function (seed) {
-        var rand = mulberry32(seed ^ 0x57ac);
-        var N = 70,
-          CELLS = 7;
-        var evts = [],
-          ticks = [],
-          tAcc = 0;
+      // Hero — "Section": a cut through the thing the headline describes,
+      // drawn the way a section drawing is. Three strata of fine hatching:
+      // the ad layer on top, the store as the dense band in the middle,
+      // the measurement layer underneath. Orange threads descend from the
+      // top — each one a sale working its way down through the stack — and
+      // the ones the tracking actually catches land on the baseline as a
+      // recorded mark. The rest stop short in the gap below the store and
+      // fade out: the sale happened, nothing recorded it. The share that
+      // lands breathes on a slow cycle, so the piece keeps moving between
+      // a leaky measurement layer and a sound one rather than asserting
+      // either. Orange is only ever revenue the tracking caught.
+      section: function (seed) {
+        var rand = mulberry32(seed ^ 0x5ec7);
+        var threads = [],
+          marks = [],
+          tAcc = 0,
+          spawnT = 0;
 
-        function spawn(e, w, h, scatter) {
-          e.x = -0.06 * w + rand() * w * 0.45;
-          e.y = h * (0.03 + rand() * 0.13);
-          // First fill only: scatter through the whole frame so the piece
-          // opens mid-flow instead of with one tidy cohort at the top.
-          if (scatter) {
-            e.x += rand() * w * 0.6;
-            e.y += rand() * h * 0.75;
+        // One path, many parallel rules — cheaper than a stroke per line
+        // and it keeps the hatch weight perfectly even.
+        function hatch(ctx, x0, x1, yA, yB, gap, a) {
+          ctx.strokeStyle = rgba(INK, a);
+          ctx.lineWidth = 0.6;
+          ctx.beginPath();
+          for (var y = yA; y <= yB; y += gap) {
+            var yy = Math.round(y) + 0.5;
+            ctx.moveTo(x0, yy);
+            ctx.lineTo(x1, yy);
           }
-          e.px = e.x;
-          e.py = e.y;
-          e.vx = (0.1 + rand() * 0.14) * w;
-          e.vy = (0.1 + rand() * 0.14) * h;
-          e.judged = false;
-          e.tracked = false;
-          e.dead = 0;
+          ctx.stroke();
         }
-        for (var i = 0; i < N; i++) evts.push({ x: undefined });
 
         return function (ctx, w, h, dt) {
           tAcc += dt;
           ctx.clearRect(0, 0, w, h);
 
-          var storeT = h * 0.44,
-            storeB = h * 0.52,
-            baseY = h * 0.8,
-            pad = w * 0.06,
-            span = w - pad * 2;
+          var x0 = w * 0.06,
+            x1 = w * 0.94,
+            adT = h * 0.1,
+            adB = h * 0.26,
+            stT = h * 0.4,
+            stB = h * 0.6,
+            trT = h * 0.74,
+            base = h * 0.8;
 
-          // The share of what happens upstairs that the tracking actually
-          // catches. Breathes rather than sitting fixed, so the piece
-          // shows both the broken and the wired-up state.
-          var health = 0.38 + 0.44 * (0.5 + 0.5 * Math.sin(tAcc * 0.085));
+          // ── the three strata, top to bottom
+          hatch(ctx, x0, x1, adT, adB, 5, 0.09);
+          hatch(ctx, x0, x1, stT, stB, 2.6, 0.15);
+          hatch(ctx, x0, x1, trT, base - 2, 3.4, 0.1);
 
-          // ── middle stratum: the store, as structure with gaps
-          // Outlined, not filled: the store is structure the events pass
-          // through, not the heaviest mass on the canvas.
-          var cw = (span / CELLS) * 0.52;
-          ctx.strokeStyle = rgba(INK, 0.2);
-          ctx.lineWidth = 1;
-          for (var c = 0; c < CELLS; c++) {
-            ctx.strokeRect(
-              Math.round(pad + (span / CELLS) * (c + 0.5) - cw / 2) + 0.5,
-              Math.round(storeT) + 0.5,
-              Math.round(cw),
-              Math.round(storeB - storeT)
-            );
-          }
-
-          // ── bottom stratum: the measurement layer
-          ctx.strokeStyle = rgba(INK, 0.24);
+          ctx.strokeStyle = rgba(INK, 0.32);
           ctx.lineWidth = 1;
           ctx.beginPath();
-          ctx.moveTo(pad * 0.4, baseY + 0.5);
-          ctx.lineTo(w - pad * 0.4, baseY + 0.5);
+          ctx.moveTo(x0, Math.round(base) + 0.5);
+          ctx.lineTo(x1, Math.round(base) + 0.5);
           ctx.stroke();
-          ctx.fillStyle = rgba(INK, 0.13);
-          for (var g = 0; g <= 22; g++) {
-            ctx.fillRect(pad * 0.4 + ((w - pad * 0.8) / 22) * g, baseY + 2.5, 1, 3);
+
+          // ── how much of it the measurement layer catches, breathing
+          var health = 0.42 + 0.42 * (0.5 + 0.5 * Math.sin(tAcc * 0.09));
+
+          spawnT += dt;
+          if (spawnT > 0.55 && threads.length < 10) {
+            spawnT = 0;
+            threads.push({
+              x: Math.round(x0 + rand() * (x1 - x0)) + 0.5,
+              y: adT,
+              v: (0.16 + rand() * 0.12) * h,
+              tracked: rand() < health,
+              stop: h * (0.63 + rand() * 0.08),
+              fade: 0
+            });
           }
 
-          // ── top stratum falling through the other two
-          for (var k = 0; k < evts.length; k++) {
-            var e = evts[k];
-            if (e.x === undefined) spawn(e, w, h, true);
-            e.px = e.x;
-            e.py = e.y;
-            e.x += e.vx * dt;
-            e.y += e.vy * dt;
-
-            // Decided once, on the way out of the store: caught or not.
-            if (!e.judged && e.y >= storeB) {
-              e.judged = true;
-              e.tracked = rand() < health;
-            }
-            if (e.judged && !e.tracked) e.dead += dt * 1.6;
-
-            if (e.judged && e.tracked && e.py < baseY && e.y >= baseY) {
-              ticks.push({ x: e.x, t: 0 });
-              spawn(e, w, h, false);
+          for (var i = threads.length - 1; i >= 0; i--) {
+            var t = threads[i];
+            var end = t.tracked ? base : t.stop;
+            if (t.y < end) {
+              t.y = Math.min(end, t.y + t.v * dt);
+            } else if (t.tracked) {
+              marks.push({ x: t.x, t: 0 });
+              threads.splice(i, 1);
               continue;
-            }
-            if (e.y > h * 1.08 || e.x > w * 1.12 || e.dead >= 1) {
-              spawn(e, w, h, false);
-              continue;
-            }
-
-            var col = GRAY,
-              al = 0.3;
-            if (!e.judged) {
-              col = ORANGE;
-              al = e.y < storeT ? 0.6 : 0.44;
-            } else if (e.tracked) {
-              col = ORANGE;
-              al = 0.72;
             } else {
-              al = 0.46 * (1 - e.dead);
+              t.fade += dt * 0.9;
+              if (t.fade >= 1) {
+                threads.splice(i, 1);
+                continue;
+              }
             }
-            // A fixed-length streak, not the single frame's step: the
-            // canvas is cleared every frame, so one frame of travel is a
-            // 3px dash and the whole layer reads as empty.
-            ctx.strokeStyle = rgba(col, al);
-            ctx.lineWidth = e.judged && e.tracked ? 1.3 : 1;
+            ctx.strokeStyle = rgba(ORANGE, t.tracked ? 0.42 : 0.36 * (1 - t.fade));
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(e.x - e.vx * 0.13, e.y - e.vy * 0.13);
-            ctx.lineTo(e.x, e.y);
+            ctx.moveTo(t.x, adT);
+            ctx.lineTo(t.x, t.y);
             ctx.stroke();
           }
 
-          // ── what the tracking actually recorded, accumulating
-          for (var t2 = ticks.length - 1; t2 >= 0; t2--) {
-            var tk = ticks[t2];
-            tk.t += dt;
-            if (tk.t > 9) {
-              ticks.splice(t2, 1);
+          // ── what the tracking recorded, accumulating on the line
+          for (var m = marks.length - 1; m >= 0; m--) {
+            var mk = marks[m];
+            mk.t += dt;
+            if (mk.t > 14) {
+              marks.splice(m, 1);
               continue;
             }
-            var grow = Math.min(1, tk.t * 4),
-              fade = 1 - tk.t / 9;
-            ctx.fillStyle = rgba(ORANGE, 0.7 * fade);
-            ctx.fillRect(tk.x - 0.7, baseY - 11 * grow, 1.4, 11 * grow);
+            var g = Math.min(1, mk.t * 5);
+            ctx.fillStyle = rgba(ORANGE, 0.8 * (1 - mk.t / 14));
+            ctx.fillRect(mk.x - 0.5, base - 5 * g, 1.4, 5 * g);
           }
         };
       },
@@ -1067,7 +1035,7 @@
     // warmup — its build-up IS the scroll-linked reveal, and pre-filling
     // it would spoil the one piece that responds to the reader directly.
     var CFG = {
-      stack: { warmup: 60, reduced: 320 },
+      section: { warmup: 90, reduced: 260 },
       harmonograph: { warmup: 0, reduced: 1500 },
       isopleth: { warmup: 6, reduced: 6 },
       fork: { warmup: 110, reduced: 260 },
