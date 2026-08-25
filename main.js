@@ -488,8 +488,8 @@
           // neatly inside them — with the canvas now bleeding past its
           // own column, particles should already be arriving from
           // off-frame rather than only ever being born on-screen.
-          p.x = rand() * w * 0.55 - w * 0.08;
-          p.y = h * (0.28 + rand() * 0.82);
+          p.x = rand() * w * 1.2 - w * 0.1;
+          p.y = rand() * h * 1.2 - h * 0.1;
           p.age = 0;
           p.life = 3.6 + rand() * 3.2;
         }
@@ -509,9 +509,12 @@
           // 203s) rather than sitting pinned at one fixed point forever —
           // a piece that runs continuously and never resets needs a
           // moving centre or "free" just means "slow forever."
-          var vx0 = w * (0.38 + 0.1 * Math.sin(tAcc * 0.043)),
-            vy0 = h * (0.42 + 0.08 * Math.cos(tAcc * 0.031));
-          var k = Math.pow(0.3 * h, 2) || 1;
+          // Centred, not off in a corner — the whole field reads as one
+          // funnel pulling scattered signal into a single point (tracking
+          // finding its attribution), not debris drifting near an edge.
+          var vx0 = w * (0.5 + 0.06 * Math.sin(tAcc * 0.043)),
+            vy0 = h * (0.5 + 0.05 * Math.cos(tAcc * 0.031));
+          var k = Math.pow(0.55 * h, 2) || 1;
           // A generous margin, not a hard ±10px wall: the canvas clips
           // regardless (its own bitmap edge), so this only changes when a
           // particle recycles — now it drifts out past the visible frame
@@ -822,8 +825,8 @@
         // Accent grains are sprinkled into one small patch rather than over
         // the whole plate, so they settle as a single orange arc on whichever
         // nodal curve runs through it — an accent, not confetti.
-        var OX = 0.66,
-          OY = 0.33,
+        var OX = 0.5,
+          OY = 0.42,
           OR = 0.15;
 
         var pts = [];
@@ -1044,7 +1047,7 @@
           var iters = reduce ? 2200 : 4000;
           var A_INK = reduce ? 0.030 : 0.020,
             A_ORG = reduce ? 0.045 : 0.030;
-          var scale = Math.min(w, h) / 2.7;
+          var scale = Math.min(w, h) / 2.3;
           var frm = frames[idx];
           var cx = w * frm[0],
             cy = h * frm[1];
