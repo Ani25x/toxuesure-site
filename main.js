@@ -264,4 +264,274 @@
     },
     { passive: true }
   );
+
+  /* ── generative graphics ──────────────────────────────────
+     A handful of canvas sketches dropped into spots that were
+     otherwise just whitespace — a sparkline by the hero, a
+     scanning checklist by the build steps, firing pixels under
+     "What I do", an order-matters relay under "How I work", a
+     ping by the contact line. Same grayscale palette as the
+     rest of the page, one accent touch each. Each draws a
+     single static frame under prefers-reduced-motion and pauses
+     its rAF loop while off-screen; independent of GSAP entirely.
+     ───────────────────────────────────────────────────────── */
+  (function () {
+    var nodes = document.querySelectorAll("[data-graphic]");
+    if (!nodes.length || typeof HTMLCanvasElement === "undefined") return;
+
+    var rootCss = getComputedStyle(document.documentElement);
+    var COL = {
+      ink: rootCss.getPropertyValue("--ink").trim() || "#111111",
+      soft: rootCss.getPropertyValue("--soft").trim() || "#6F6B63",
+      rule: rootCss.getPropertyValue("--rule").trim() || "#DDDAD3",
+      accent: rootCss.getPropertyValue("--accent").trim() || "#E2661F",
+      ground: rootCss.getPropertyValue("--ground").trim() || "#F5F4F0"
+    };
+
+    // Each entry is a factory: called once per canvas, returns a
+    // frame(ctx, w, h, t) closure that owns its own local state
+    // (a random walk, a flash map, a travelling dot) so multiple
+    // instances of the same sketch never share memory.
+    var sketches = {
+      // Hero: a scrolling performance line over a faint dot grid.
+      signal: function () {
+        var pts = [], n = 34, val = 0.5, lastStep = -1;
+        for (var i = 0; i < n; i++) pts.push(val);
+        return function (ctx, w, h, t) {
+          ctx.clearRect(0, 0, w, h);
+          var step = Math.floor(t / 0.16);
+          if (step !== lastStep) {
+            lastStep = step;
+            val += (Math.random() - 0.5) * 0.24;
+            val = Math.max(0.08, Math.min(0.92, val));
+            pts.push(val);
+            pts.shift();
+          }
+          ctx.fillStyle = COL.rule;
+          var gap = 24;
+          for (var gx = gap / 2; gx < w; gx += gap) {
+            for (var gy = gap / 2; gy < h; gy += gap) {
+              ctx.beginPath();
+              ctx.arc(gx, gy, 1, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+          ctx.beginPath();
+          for (var i2 = 0; i2 < pts.length; i2++) {
+            var x = (i2 / (pts.length - 1)) * w;
+            var y = h - pts[i2] * h * 0.72 - h * 0.12;
+            if (i2 === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = COL.accent;
+          ctx.lineWidth = 1.75;
+          ctx.lineJoin = "round";
+          ctx.lineCap = "round";
+          ctx.stroke();
+          var ly = h - pts[pts.length - 1] * h * 0.72 - h * 0.12;
+          ctx.beginPath();
+          ctx.arc(w - 3, ly, 2.4 + Math.sin(t * 3) * 1, 0, Math.PI * 2);
+          ctx.fillStyle = COL.accent;
+          ctx.fill();
+        };
+      },
+
+      // Work steps: a vertical spine with as many ticks as there
+      // are steps beside it, scanning down and looping.
+      scan: function () {
+        var ticks = 6;
+        return function (ctx, w, h, t) {
+          ctx.clearRect(0, 0, w, h);
+          var top = h * 0.08, bottom = h * 0.92, span = bottom - top;
+          var cx = w * 0.26;
+          ctx.strokeStyle = COL.rule;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(cx, top);
+          ctx.lineTo(cx, bottom);
+          ctx.stroke();
+
+          var cycle = 4.2;
+          var phase = (t % cycle) / cycle;
+          var activeIdx = Math.floor(phase * ticks);
+
+          for (var i = 0; i < ticks; i++) {
+            var y = top + (i / (ticks - 1)) * span;
+            var on = i <= activeIdx;
+            var near = i === activeIdx;
+            ctx.beginPath();
+            ctx.arc(cx, y, near ? 4.2 : 3, 0, Math.PI * 2);
+            ctx.fillStyle = on ? COL.accent : COL.ground;
+            ctx.fill();
+            ctx.lineWidth = 1.2;
+            ctx.strokeStyle = on ? COL.accent : COL.soft;
+            ctx.stroke();
+
+            ctx.strokeStyle = on ? COL.ink : COL.rule;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx + 12, y);
+            ctx.lineTo(cx + 12 + (on ? 34 : 20), y);
+            ctx.stroke();
+          }
+        };
+      },
+
+      // What I do: a loose grid of tracking pixels, one firing
+      // at a time.
+      pixels: function () {
+        var cols = 7, rows = 4, flashes = {}, nextSpawn = 0;
+        return function (ctx, w, h, t) {
+          ctx.clearRect(0, 0, w, h);
+          var padX = w * 0.06, padY = h * 0.14;
+          var gx = (w - padX * 2) / (cols - 1);
+          var gy = (h - padY * 2) / (rows - 1);
+
+          if (t > nextSpawn) {
+            nextSpawn = t + 0.16 + Math.random() * 0.3;
+            var key = Math.floor(Math.random() * rows) + "-" + Math.floor(Math.random() * cols);
+            flashes[key] = t;
+          }
+
+          for (var r = 0; r < rows; r++) {
+            for (var c = 0; c < cols; c++) {
+              var x = padX + c * gx, y = padY + r * gy;
+              var key2 = r + "-" + c;
+              var since = flashes[key2] !== undefined ? t - flashes[key2] : Infinity;
+              var lit = since >= 0 && since < 0.6;
+              var s = lit ? 1 - since / 0.6 : 0;
+              ctx.beginPath();
+              ctx.arc(x, y, 2 + s * 2.2, 0, Math.PI * 2);
+              ctx.fillStyle = lit ? COL.accent : COL.rule;
+              ctx.globalAlpha = lit ? 0.35 + s * 0.65 : 1;
+              ctx.fill();
+              ctx.globalAlpha = 1;
+            }
+          }
+        };
+      },
+
+      // How I work: three nodes, a pulse relaying between them —
+      // the order matters.
+      sequence: function () {
+        return function (ctx, w, h, t) {
+          ctx.clearRect(0, 0, w, h);
+          var y = h * 0.5;
+          var xs = [w * 0.12, w * 0.5, w * 0.88];
+          ctx.strokeStyle = COL.rule;
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(xs[0], y);
+          ctx.lineTo(xs[2], y);
+          ctx.stroke();
+
+          var cycle = 2.8;
+          var phase = (t % cycle) / cycle;
+          var travel = phase * (xs.length - 1);
+          var seg = Math.min(Math.floor(travel), xs.length - 2);
+          var segT = travel - seg;
+          var px = xs[seg] + (xs[seg + 1] - xs[seg]) * segT;
+
+          for (var i = 0; i < xs.length; i++) {
+            ctx.beginPath();
+            ctx.arc(xs[i], y, 5, 0, Math.PI * 2);
+            ctx.fillStyle = COL.ground;
+            ctx.fill();
+            ctx.lineWidth = 1.4;
+            ctx.strokeStyle = COL.ink;
+            ctx.stroke();
+          }
+          ctx.beginPath();
+          ctx.arc(px, y, 3.6, 0, Math.PI * 2);
+          ctx.fillStyle = COL.accent;
+          ctx.fill();
+        };
+      },
+
+      // Contact: a quiet ping, three rings out from a center dot.
+      ping: function () {
+        return function (ctx, w, h, t) {
+          ctx.clearRect(0, 0, w, h);
+          var cx = w / 2, cy = h / 2, maxR = Math.min(w, h) * 0.42, cycle = 2.2;
+          for (var k = 0; k < 3; k++) {
+            var pt = ((((t + (k * cycle) / 3) % cycle) + cycle) % cycle) / cycle;
+            var r = Math.max(0, pt * maxR);
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.strokeStyle = COL.accent;
+            ctx.globalAlpha = (1 - pt) * 0.55;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+          ctx.beginPath();
+          ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+          ctx.fillStyle = COL.ink;
+          ctx.fill();
+        };
+      }
+    };
+
+    [].forEach.call(nodes, function (cv) {
+      var make = sketches[cv.dataset.graphic];
+      if (!make) return;
+
+      function size() {
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var w = cv.clientWidth, h = cv.clientHeight;
+        if (!w || !h) return null;
+        cv.width = Math.round(w * dpr);
+        cv.height = Math.round(h * dpr);
+        var ctx = cv.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx: ctx, w: w, h: h };
+      }
+
+      var dims = size();
+      if (!dims) return;
+      var frame = make();
+
+      if (reduce) {
+        frame(dims.ctx, dims.w, dims.h, 0);
+        return;
+      }
+
+      var visible = true;
+      if ("IntersectionObserver" in window) {
+        new IntersectionObserver(
+          function (entries) {
+            visible = entries[0].isIntersecting;
+          },
+          { threshold: 0 }
+        ).observe(cv);
+      }
+
+      // t0 is set from the first rAF timestamp itself, not a separately
+      // sampled performance.now() — mixing the two clocks let the very
+      // first delta go slightly negative in some browsers.
+      var t0 = null;
+      requestAnimationFrame(function loop(ts) {
+        if (t0 === null) t0 = ts;
+        if (visible) frame(dims.ctx, dims.w, dims.h, Math.max(0, (ts - t0) / 1000));
+        requestAnimationFrame(loop);
+      });
+
+      var resizeTimer;
+      window.addEventListener(
+        "resize",
+        function () {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(function () {
+            var d = size();
+            if (d) {
+              dims.ctx = d.ctx;
+              dims.w = d.w;
+              dims.h = d.h;
+            }
+          }, 150);
+        },
+        { passive: true }
+      );
+    });
+  })();
 })();

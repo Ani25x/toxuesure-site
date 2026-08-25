@@ -53,7 +53,11 @@ a.u,.mast nav a,.meta a,.tag.link{
 .mast nav a:hover::after,.meta a:hover::after{transform:scaleX(1)}
 
 /* ─── hero ─────────────────────────────────────────────── */
-.hero{padding:clamp(70px,14vh,180px) 0 clamp(58px,10vh,132px)}
+.hero{
+  padding:clamp(70px,14vh,180px) 0 clamp(58px,10vh,132px);
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,200px);
+  gap:clamp(24px,4vw,44px);align-items:start;
+}
 h1{
   font-family:var(--display);font-weight:500;
   font-size:clamp(30px,5.4vw,64px);line-height:1.12;letter-spacing:-.035em;
@@ -91,6 +95,7 @@ p:last-child{margin-bottom:0}
 .muted{color:var(--soft)}
 .stack{display:grid;gap:clamp(26px,3.4vw,40px)}
 .item p{color:var(--soft);max-width:60ch}
+.lead{display:flex;flex-direction:column;gap:clamp(28px,4vw,44px)}
 
 /* ─── case ─────────────────────────────────────────────── */
 .case-head{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:baseline;margin-bottom:clamp(26px,4vw,42px)}
@@ -116,7 +121,8 @@ p:last-child{margin-bottom:0}
 .fig.in .n em{transform:translateY(0)}
 .fig .k{display:block;margin-top:11px;font-size:14px;color:var(--soft);max-width:24ch;line-height:1.4}
 
-.steps{display:grid;gap:clamp(24px,3vw,34px);margin-top:clamp(40px,6vw,60px)}
+.steps-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,280px);gap:clamp(24px,4vw,56px);align-items:start;margin-top:clamp(40px,6vw,60px)}
+.steps{display:grid;gap:clamp(24px,3vw,34px)}
 .step{display:grid;grid-template-columns:52px minmax(0,1fr);gap:clamp(14px,2vw,26px);align-items:start}
 .step .idx{font-family:var(--display);font-size:12.5px;font-weight:500;color:var(--soft);padding-top:4px}
 .step p{color:var(--soft);max-width:62ch}
@@ -136,10 +142,32 @@ p:last-child{margin-bottom:0}
   fill:var(--ink);text-anchor:middle;dominant-baseline:central;
 }
 
-.stages{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:clamp(24px,3vw,34px);margin-top:clamp(40px,6vw,60px)}
-.stage{display:flex;gap:12px;align-items:baseline}
+/* flex + wrap, not grid: with five stages the last one wraps onto
+   its own row, and justify-content centers it there instead of
+   stranding it flush left under stage one. */
+.stages{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(24px,3vw,34px);margin-top:clamp(40px,6vw,60px)}
+.stage{flex:1 1 190px;max-width:260px;display:flex;gap:12px;align-items:baseline}
 .stage .idx{font-family:var(--display);font-size:12.5px;font-weight:500;color:var(--accent)}
 .stage p{color:var(--soft);max-width:38ch}
+
+/* ─── generative graphics ─────────────────────────────────
+   Small canvas sketches dropped into a few spots that were
+   otherwise just whitespace next to a heading or a list.
+   Same grayscale palette as everything else, one accent
+   touch each — quiet company for the copy, not competition
+   for it. Hidden below 820px where there's no room to spare. */
+.hero-graphic,.work-graphic,.services-graphic,.approach-graphic,.contact-graphic{
+  border:1px solid var(--rule);border-radius:2px;overflow:hidden;background:var(--ground);
+}
+.hero-graphic canvas,.work-graphic canvas,.services-graphic canvas,
+.approach-graphic canvas,.contact-graphic canvas{display:block;width:100%;height:100%}
+
+.hero-graphic{height:clamp(220px,26vw,360px);align-self:stretch}
+.work-graphic{position:sticky;top:100px;height:clamp(280px,32vw,440px)}
+.services-graphic,.approach-graphic{height:clamp(150px,16vw,200px)}
+.contact-graphic{height:clamp(140px,16vw,200px)}
+
+.contact-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,240px);gap:clamp(24px,5vw,60px);align-items:center}
 
 /* ─── contact ──────────────────────────────────────────── */
 .contact .big{
@@ -196,11 +224,23 @@ footer{
 .r{opacity:0;transform:translateY(14px)}
 .r.in{opacity:1;transform:none}
 
+/* the hero's three lines are hand-broken in the markup, not just
+   wrapped by max-width — they need more spare room than the other
+   boxes before a graphic column is worth reserving, or "fix the"
+   folds onto its own line and the crafted break is lost. */
+@media (max-width:1180px){
+  .hero{grid-template-columns:1fr}
+  .hero-graphic{display:none}
+}
+
 @media (max-width:820px){
   .cols{grid-template-columns:1fr;gap:26px}
   h2{max-width:22ch}
   .label.sticky{position:static}
   .shot{order:2}
+  .steps-wrap{grid-template-columns:1fr}
+  .contact-grid{grid-template-columns:1fr}
+  .work-graphic,.services-graphic,.approach-graphic,.contact-graphic{display:none}
 }
 @media (max-width:520px){
   .mast nav a:first-child{display:none}
