@@ -6,16 +6,17 @@
 @font-face{font-family:"Open Sauce";src:url(fonts/open-sauce-700.woff2) format('woff2');font-weight:700;font-display:swap}
 
 :root{
-  --ground:#F0CC98;
-  --panel:#FBEEDA;
-  --ink:#231208;
-  --soft:#7A5636;
-  --rule:#DCAD73;
-  --accent:#C2703A;
-  --accent-ink:#7A3D14;
-  --hero-1:#E2661F;
-  --hero-2:#F3C97E;
-  --hero-3:#F0925B;
+  /* sampled from the LinkedIn carousel */
+  --ground:#E8DBBC;      /* cream, top-left of the carousel gradient */
+  --card:#F7F1E3;        /* cream card surface */
+  --panel:#F7F1E3;
+  --ink:#2A2522;         /* carousel charcoal */
+  --soft:#3F2E22;
+  --rule:rgba(42,37,34,.2);
+  --accent:#C2703A;      /* carousel badge orange */
+  --accent-ink:#8A4620;
+  --g-cream:#E8DBBC;--g-sand:#EBCA9F;--g-gold:#F7B243;--g-amber:#F3A55F;
+  --g-hot:#FA5A23;--g-coral:#F87237;--g-peach:#EE8C75;
   --display:"Open Sauce",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
   --text:"Open Sauce",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
   --pad:clamp(22px,6vw,120px);
@@ -28,16 +29,32 @@
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
 body{
-  margin:0;background:var(--ground);color:var(--ink);
+  margin:0;background:transparent;color:var(--ink);
   font-family:var(--text);font-size:17px;line-height:1.55;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
   overflow-x:hidden;
 }
-::selection{background:var(--ink);color:var(--ground)}
+html{background:var(--g-sand)}
+body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none}
+body::before{
+  z-index:-2;
+  background:
+    radial-gradient(70% 55% at -5% 105%, var(--g-hot) 0%, transparent 70%),
+    radial-gradient(55% 40% at 50% 108%, var(--g-coral) 0%, transparent 72%),
+    radial-gradient(45% 45% at 105% 100%, var(--g-peach) 0%, transparent 70%),
+    radial-gradient(55% 50% at 85% 50%, var(--g-gold) 0%, transparent 70%),
+    linear-gradient(158deg, var(--g-cream) 0%, var(--g-sand) 28%, var(--g-amber) 58%, var(--g-coral) 100%);
+}
+/* film grain, same texture as the carousel */
+body::after{
+  z-index:-1;opacity:.32;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+::selection{background:var(--ink);color:var(--card)}
 img{max-width:100%;height:auto;display:block}
 
 .skip{position:absolute;left:-9999px}
-.skip:focus{left:var(--pad);top:12px;background:var(--ink);color:var(--ground);padding:8px 12px;z-index:99}
+.skip:focus{left:var(--pad);top:12px;background:var(--ink);color:var(--card);padding:8px 12px;z-index:99}
 
 .wrap{max-width:1180px;margin:0 auto;padding:0 var(--pad)}
 
@@ -72,23 +89,17 @@ a.u,.mast nav a,.meta a,.tag.link{
   display:grid;grid-template-columns:minmax(0,1fr) 200px;
   gap:clamp(24px,4vw,44px);align-items:start;
 }
-/* Full-bleed brand gradient behind the hero only — the vivid orange
-   card look from the carousel — fading out to the page's own --ground
-   at the bottom so the seam into the rest of the page is invisible. */
-.hero::before{
-  content:"";position:absolute;z-index:-1;top:0;bottom:0;left:-50vw;right:-50vw;
-  background:
-    radial-gradient(64% 75% at 12% -6%, var(--hero-1) 0%, transparent 58%),
-    radial-gradient(58% 60% at 96% 8%, var(--hero-3) 0%, transparent 62%),
-    linear-gradient(175deg, var(--hero-1) 0%, var(--hero-2) 42%, var(--ground) 92%);
-}
+/* The carousel's asterisk sticker: cream fill, charcoal outline, and a
+   solid offset "extrusion" rather than a soft shadow. */
 .hero-mark{
-  position:absolute;top:clamp(14px,2.6vw,28px);left:calc(-1 * var(--pad) + clamp(8px,2vw,20px));
-  width:clamp(58px,6.4vw,84px);height:auto;
-  filter:drop-shadow(3px 5px 0 rgba(35,18,8,.22));
+  position:absolute;top:0;left:0;
+  width:clamp(64px,6.4vw,88px);height:clamp(64px,6.4vw,88px);
 }
-.hero-mark .outline{fill:var(--ink)}
-.hero-mark .fill{fill:var(--hero-2)}
+/* stroke on the lower copy, un-stroked copy on top: the top copy hides
+   the strokes where the bars cross, leaving one clean outer outline */
+.hero-mark .extrude{fill:var(--ink);stroke:var(--ink);stroke-width:5;stroke-linejoin:round}
+.hero-mark .outline{fill:#EDD2AC;stroke:var(--ink);stroke-width:5;stroke-linejoin:round}
+.hero-mark .fill{fill:#EDD2AC}
 h1{
   font-family:var(--display);font-weight:500;
   font-size:clamp(30px,5.4vw,64px);line-height:1.12;letter-spacing:-.035em;
@@ -122,17 +133,9 @@ section{padding:0 0 clamp(52px,8vw,104px)}
   margin:clamp(40px,6vw,72px) 0 clamp(26px,4vw,44px);
 }
 .label::after{content:" *";color:var(--accent);letter-spacing:normal}
-.label.sticky{position:sticky;top:20px;z-index:2;padding-block:6px}
-/* The label only spans .wrap's content width, but the services/approach
-   canvases now bleed into the margins beside it — without this, the
-   bled portion would show through above the label as a mismatched band
-   as it scrolls underneath. Extend the same ground colour past the
-   label's own box, behind its text (z-index:-1, but still inside this
-   element's own z-index:2 stacking context, so it stays above the art). */
-.label.sticky::before{
-  content:"";position:absolute;top:0;bottom:0;left:-50vw;right:-50vw;
-  background:var(--ground);z-index:-1;
-}
+.label.sticky{position:sticky;top:20px;z-index:2;width:fit-content;
+  background:var(--card);padding:6px 11px;border-radius:3px;
+  box-shadow:0 1px 0 rgba(42,37,34,.08)}
 
 .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.55fr);gap:clamp(24px,5vw,72px)}
 h2{font-family:var(--display);font-weight:500;font-size:clamp(23px,2.9vw,36px);line-height:1.2;letter-spacing:-.03em;margin:0;max-width:17ch}
@@ -159,7 +162,7 @@ p:last-child{margin-bottom:0}
   padding:5px 9px;border-radius:2px;white-space:nowrap;
 }
 .tag.link{transition:border-color .3s var(--ease),color .3s var(--ease),background .3s var(--ease)}
-.tag.link:hover{color:var(--ground);background:var(--accent);border-color:var(--accent)}
+.tag.link:hover{color:var(--card);background:var(--accent);border-color:var(--accent)}
 
 .shot img{border:1px solid var(--rule);border-radius:2px}
 
@@ -203,11 +206,15 @@ p:last-child{margin-bottom:0}
 .steps-wrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:clamp(24px,4vw,56px);align-items:start;margin-top:clamp(40px,6vw,60px)}
 .steps{display:grid;gap:clamp(24px,3vw,34px)}
 .step{display:grid;grid-template-columns:52px minmax(0,1fr);gap:clamp(14px,2vw,26px);align-items:start}
-.step .idx{font-family:var(--display);font-size:12.5px;font-weight:500;color:var(--soft);padding-top:4px}
+.step .idx,.stage .idx{
+  font-family:var(--display);font-size:13px;font-weight:700;color:var(--card);
+  background:var(--accent);border-radius:3px;
+  width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;flex:none;
+}
 .step p{color:var(--soft);max-width:62ch}
 
 .note{
-  position:relative;margin-top:clamp(38px,5vw,56px);padding:clamp(20px,3vw,28px);
+  position:relative;box-shadow:0 1px 0 rgba(42,37,34,.08);margin-top:clamp(38px,5vw,56px);padding:clamp(20px,3vw,28px);
   padding-left:clamp(36px,5vw,44px);
   background:var(--panel);border:1px solid var(--accent);border-radius:2px;max-width:66ch;
 }
@@ -223,7 +230,7 @@ p:last-child{margin-bottom:0}
 .loop-diagram{margin:clamp(40px,6vw,64px) auto 0;max-width:640px}
 .loop-diagram svg{display:block;width:100%;height:auto;overflow:visible}
 .loop-path{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round}
-.loop-node circle{fill:var(--ground);stroke:var(--ink);stroke-width:1.25}
+.loop-node circle{fill:var(--card);stroke:var(--ink);stroke-width:1.25}
 .loop-node text{
   font-family:var(--display);font-weight:700;font-size:26px;
   fill:var(--ink);text-anchor:middle;dominant-baseline:central;
@@ -233,8 +240,7 @@ p:last-child{margin-bottom:0}
    its own row, and justify-content centers it there instead of
    stranding it flush left under stage one. */
 .stages{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(24px,3vw,34px);margin-top:clamp(40px,6vw,60px)}
-.stage{flex:1 1 190px;max-width:260px;display:flex;gap:12px;align-items:baseline}
-.stage .idx{font-family:var(--display);font-size:12.5px;font-weight:500;color:var(--accent)}
+.stage{flex:1 1 190px;max-width:260px;display:flex;gap:12px;align-items:flex-start}
 .stage p{color:var(--soft);max-width:38ch}
 
 /* ─── generative graphics ─────────────────────────────────
@@ -406,7 +412,6 @@ footer{
   .cols{grid-template-columns:1fr;gap:26px}
   h2{max-width:22ch}
   .label.sticky{position:static}
-  .label.sticky::before{display:none}
   .shot{order:2}
   .steps-wrap{grid-template-columns:1fr}
   .contact-grid{grid-template-columns:1fr}
