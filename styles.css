@@ -6,13 +6,16 @@
 @font-face{font-family:"Open Sauce";src:url(fonts/open-sauce-700.woff2) format('woff2');font-weight:700;font-display:swap}
 
 :root{
-  --ground:#F7ECE2;
-  --panel:#F1DDC9;
-  --ink:#1A1310;
-  --soft:#7A6A5C;
-  --rule:#E4D2BE;
+  --ground:#F0CC98;
+  --panel:#FBEEDA;
+  --ink:#231208;
+  --soft:#7A5636;
+  --rule:#DCAD73;
   --accent:#C2703A;
-  --accent-ink:#8A4A22;
+  --accent-ink:#7A3D14;
+  --hero-1:#E2661F;
+  --hero-2:#F3C97E;
+  --hero-3:#F0925B;
   --display:"Open Sauce",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
   --text:"Open Sauce",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
   --pad:clamp(22px,6vw,120px);
@@ -59,6 +62,7 @@ a.u,.mast nav a,.meta a,.tag.link{
 
 /* ─── hero ─────────────────────────────────────────────── */
 .hero{
+  position:relative;
   padding:clamp(70px,14vh,180px) 0 clamp(58px,10vh,132px);
   /* 200px, not minmax(150px,200px): the graphic canvas below is
      position:absolute (it bleeds past this column on purpose), so it no
@@ -68,6 +72,23 @@ a.u,.mast nav a,.meta a,.tag.link{
   display:grid;grid-template-columns:minmax(0,1fr) 200px;
   gap:clamp(24px,4vw,44px);align-items:start;
 }
+/* Full-bleed brand gradient behind the hero only — the vivid orange
+   card look from the carousel — fading out to the page's own --ground
+   at the bottom so the seam into the rest of the page is invisible. */
+.hero::before{
+  content:"";position:absolute;z-index:-1;top:0;bottom:0;left:-50vw;right:-50vw;
+  background:
+    radial-gradient(64% 75% at 12% -6%, var(--hero-1) 0%, transparent 58%),
+    radial-gradient(58% 60% at 96% 8%, var(--hero-3) 0%, transparent 62%),
+    linear-gradient(175deg, var(--hero-1) 0%, var(--hero-2) 42%, var(--ground) 92%);
+}
+.hero-mark{
+  position:absolute;top:clamp(14px,2.6vw,28px);left:calc(-1 * var(--pad) + clamp(8px,2vw,20px));
+  width:clamp(58px,6.4vw,84px);height:auto;
+  filter:drop-shadow(3px 5px 0 rgba(35,18,8,.22));
+}
+.hero-mark .outline{fill:var(--ink)}
+.hero-mark .fill{fill:var(--hero-2)}
 h1{
   font-family:var(--display);font-weight:500;
   font-size:clamp(30px,5.4vw,64px);line-height:1.12;letter-spacing:-.035em;
