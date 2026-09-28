@@ -292,9 +292,9 @@
     var nodes = document.querySelectorAll("[data-graphic]");
     if (!nodes.length || typeof HTMLCanvasElement === "undefined") return;
 
-    var INK = [17, 17, 17];
-    var GRAY = [111, 107, 99];
-    var ORANGE = [226, 102, 31];
+    var INK = [26, 19, 16];
+    var GRAY = [122, 106, 92];
+    var ORANGE = [194, 112, 58];
 
     function rgba(c, a) {
       return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")";
