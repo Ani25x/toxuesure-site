@@ -97,9 +97,20 @@ a.u,.mast nav a,.meta a,.tag.link{
 }
 /* stroke on the lower copy, un-stroked copy on top: the top copy hides
    the strokes where the bars cross, leaving one clean outer outline */
-.hero-mark .extrude{fill:var(--ink);stroke:var(--ink);stroke-width:5;stroke-linejoin:round}
-.hero-mark .outline{fill:#EDD2AC;stroke:var(--ink);stroke-width:5;stroke-linejoin:round}
-.hero-mark .fill{fill:#EDD2AC}
+/* Desktop shows the big asterisk in the hero's right column instead;
+   this small one only appears once that column is dropped (<1180px). */
+.hero-mark{display:none}
+
+/* Asterisks replacing the old generative canvases. The containers keep
+   their grid slots and heights; the mark just centers inside them. */
+.hero-graphic,.work-graphic,.approach-graphic,.contact-graphic{
+  display:flex;align-items:center;justify-content:center;
+}
+.ast{display:block;height:auto;flex:none}
+.ast-hero    {width:clamp(160px,15vw,210px);transform:rotate(-8deg)}
+.ast-work    {width:clamp(170px,17vw,230px);transform:rotate(14deg)}
+.ast-approach{width:clamp(130px,12vw,170px);transform:rotate(-18deg)}
+.ast-contact {width:clamp(120px,11vw,160px);transform:rotate(22deg)}
 h1{
   font-family:var(--display);font-weight:500;
   font-size:clamp(30px,5.4vw,64px);line-height:1.12;letter-spacing:-.035em;
@@ -398,6 +409,7 @@ footer{
 @media (max-width:1180px){
   .hero{grid-template-columns:1fr}
   .hero-graphic{display:none}
+  .hero-mark{display:block}
 }
 
 @media (max-width:820px){
