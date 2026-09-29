@@ -89,17 +89,8 @@ a.u,.mast nav a,.meta a,.tag.link{
   display:grid;grid-template-columns:minmax(0,1fr) 200px;
   gap:clamp(24px,4vw,44px);align-items:start;
 }
-/* The carousel's asterisk sticker: cream fill, charcoal outline, and a
-   solid offset "extrusion" rather than a soft shadow. */
-.hero-mark{
-  position:absolute;top:0;left:0;
-  width:clamp(64px,6.4vw,88px);height:clamp(64px,6.4vw,88px);
-}
 /* stroke on the lower copy, un-stroked copy on top: the top copy hides
    the strokes where the bars cross, leaving one clean outer outline */
-/* Desktop shows the big asterisk in the hero's right column instead;
-   this small one only appears once that column is dropped (<1180px). */
-.hero-mark{display:none}
 
 /* Asterisks replacing the old generative canvases. The containers keep
    their grid slots and heights; the mark just centers inside them. */
@@ -408,8 +399,10 @@ footer{
    folds onto its own line and the crafted break is lost. */
 @media (max-width:1180px){
   .hero{grid-template-columns:1fr}
-  .hero-graphic{display:none}
-  .hero-mark{display:block}
+  /* the grid column is dropped, but the asterisk stays on the right:
+     it floats over the empty space beside the headline instead */
+  .hero-graphic{display:flex;position:absolute;right:0;top:clamp(140px,24vw,280px);height:auto}
+  .ast-hero{width:clamp(120px,16vw,180px)}
 }
 
 @media (max-width:820px){
@@ -428,6 +421,8 @@ footer{
   .steps-wrap{grid-template-columns:1fr}
   .contact-grid{grid-template-columns:1fr}
   .work-graphic,.services-graphic,.approach-graphic,.contact-graphic{display:none}
+  .hero-graphic{top:clamp(8px,2.5vw,20px)}
+  .ast-hero{width:clamp(64px,19vw,92px)}
 }
 @media (max-width:520px){
   .mast nav a:first-child{display:none}
