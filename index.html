@@ -1,26 +1,21 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Toxuesure — Performance marketing for D2C ecommerce</title>
-<meta name="description" content="I build D2C ecommerce end to end — store, pricing, tracking, paid, organic and creative. WooCommerce builds, GA4 and Conversions API, Meta Ads and unit economics. Navi Mumbai.">
-<link rel="canonical" href="https://toxuesure.in/">
-
-<meta property="og:type" content="website">
+<title>toxuesure.</title>
+<meta name="description" content="Motion work by Aniket. Everything starts in fog. Look closer.">
+<meta name="theme-color" content="#E9E9E6">
+<meta property="og:title" content="toxuesure.">
+<meta property="og:description" content="Everything starts in fog. Look closer.">
+<meta property="og:image" content="https://toxuesure.in/media/og.jpg">
 <meta property="og:url" content="https://toxuesure.in/">
-<meta property="og:title" content="Toxuesure — Performance marketing for D2C ecommerce">
-<meta property="og:description" content="I build the store, fix the tracking underneath it, and run the ads on top.">
-<meta property="og:image" content="https://toxuesure.in/img/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#E8DBBC">
-
-<link rel="preload" href="fonts/open-sauce-500.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/open-sauce-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="favicon.svg">
-<link rel="stylesheet" href="styles.css?v=17">
-
+<link rel="canonical" href="https://toxuesure.in/">
+<link rel="icon" href="media/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/ArchivoExpanded-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/site.css">
+<script>document.documentElement.classList.add("js")</script>
 <!-- Google Tag Manager — container GTM-TCVJGQFV -->
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -29,336 +24,111 @@ var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+
 j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer','GTM-TCVJGQFV');
 </script>
-
-<script type="application/ld+json">
-{
-  "@context":"https://schema.org",
-  "@type":"ProfessionalService",
-  "name":"Toxuesure",
-  "url":"https://toxuesure.in/",
-  "email":"contact@toxuesure.in",
-  "founder":{"@type":"Person","name":"Aniket Pattebahadur"},
-  "areaServed":"IN",
-  "address":{"@type":"PostalAddress","addressLocality":"Navi Mumbai","addressRegion":"Maharashtra","addressCountry":"IN"},
-  "description":"Performance marketing, ecommerce analytics and WooCommerce builds for D2C brands.",
-  "knowsAbout":["Meta Ads","Google Ads","Google Analytics 4","Google Tag Manager","Conversions API","WooCommerce","Unit economics"]
-}
-</script>
-
-<script type="application/ld+json">
-{
-  "@context":"https://schema.org",
-  "@type":"Person",
-  "name":"Aniket Pattebahadur",
-  "url":"https://toxuesure.in/",
-  "email":"contact@toxuesure.in",
-  "jobTitle":"Growth, marketing ops and ecommerce analytics",
-  "address":{"@type":"PostalAddress","addressLocality":"Navi Mumbai","addressRegion":"Maharashtra","addressCountry":"IN"},
-  "sameAs":["https://www.linkedin.com/in/pattebahaduraniket/","https://github.com/Ani25x"],
-  "knowsAbout":["Meta Ads","Google Ads","Google Analytics 4","Google Tag Manager","Conversions API","WooCommerce","Google Merchant Center","Python","SQL","LLM tooling","Power BI","Unit economics"]
-}
-</script>
+<script type="importmap">{ "imports": { "three": "./vendor/three/three.module.js" } }</script>
 </head>
 <body>
-<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TCVJGQFV"
-height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TCVJGQFV" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<canvas id="fog" aria-hidden="true"></canvas>
 
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="ast" viewBox="-8 -8 120 120">
-    <g transform="translate(4 5)" fill="#2A2522" stroke="#2A2522" stroke-width="5" stroke-linejoin="round"><rect x="39" y="1" width="22" height="98" rx="2" transform="rotate(90 50 50)"/><rect x="39" y="1" width="22" height="98" rx="2" transform="rotate(30 50 50)"/><rect x="39" y="1" width="22" height="98" rx="2" transform="rotate(150 50 50)"/></g>
-    <g fill="#EDD2AC" stroke="#2A2522" stroke-width="5" stroke-linejoin="round"><rect x="39" y="1" width="22" height="98" rx="2" transform="rotate(90 50 50)"/><rect x="39" y="1" width="22" height="98" rx="2" transform="rotate(30 50 50)"/><rect x="39" y="1" width="22" height="98" rx="2" transform="rotate(150 50 50)"/></g>
-    <g fill="#EDD2AC"><rect x="39" y="1" width="22" height="98" rx="2" transform="rotate(90 50 50)"/><rect x="39" y="1" width="22" height="98" rx="2" transform="rotate(30 50 50)"/><rect x="39" y="1" width="22" height="98" rx="2" transform="rotate(150 50 50)"/></g>
-  </symbol>
-</svg>
+<header class="bar">
+  <a class="bar__mark" href="#top" aria-label="toxuesure, back to top">toxuesure<i></i></a>
+  <nav class="bar__nav" aria-label="Sections">
+    <a href="#work">Work</a><a href="#play">Play</a><a href="#process">Process</a><a href="#about">About</a>
+  </nav>
+</header>
 
-<a class="skip" href="#main">Skip to content</a>
+<main id="top">
+  <section class="hero" id="hero">
+    <h1 class="hero__mark"><span class="hero__word">toxuesure</span><i class="hero__dot"></i></h1>
+    <p class="hero__line">Look closer.</p>
+    <p class="hero__hint label"><span class="only-pointer">Move to look through the fog</span><span class="only-touch">Press and hold to look</span></p>
+  </section>
 
-<div class="wrap">
-
-  <div class="mast">
-    <a class="mark" href="/">Toxuesure</a>
-    <nav>
-      <a href="#loop">The loop</a>
-      <a href="#work">Work</a>
-      <a href="#built">Built</a>
-      <a href="#services">What I do</a>
-      <a href="#contact">Contact</a>
-    </nav>
-  </div>
-
-  <header class="hero" id="main">
-    <div class="hero-copy">
-      <h1 class="reveal-lines">
-        <span><i>I build the store, fix the</i></span>
-        <span><i>tracking underneath it,</i></span>
-        <span><i>and run the ads on top.</i></span>
-      </h1>
-      <p class="hero-sub r" data-d="3">I build D2C ecommerce end to end — store, pricing, tracking, paid, organic and creative. Most stores I open are optimising ad spend against numbers that were never wired up correctly. That is usually the first thing worth fixing, and it is rarely the thing anyone is selling you.</p>
-      <div class="hero-meta r" data-d="4">
-        <span>Navi Mumbai</span>
-        <span>Open to full-time roles and freelance D2C work</span>
-        <a href="mailto:contact@toxuesure.in?subject=D2C%20growth%20enquiry&amp;body=Store%20URL%3A%0A%0AWhat%20looks%20wrong%3A%0A%0AMonthly%20ad%20spend%3A%0A" data-gtm="email">contact@toxuesure.in</a>
+  <section class="work" id="work" aria-label="Work">
+    <article class="chapter" data-chapter>
+      <div class="chapter__stage">
+        <div class="chapter__inner">
+          <div class="chapter__frame">
+            <video src="media/intro.mp4" poster="media/intro.jpg" muted loop playsinline preload="metadata" aria-label="The toxuesure channel intro: a wordmark racks out of fog into focus and a red-orange dot lands after it."></video>
+          </div>
+          <div class="chapter__text">
+            <p class="label">CH. 01 / 2026 / Blender</p>
+            <h2 class="display">The intro</h2>
+            <p class="body">Fog, a rack focus, one dot. Three and a half seconds.</p>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="hero-graphic r" data-d="2" aria-hidden="true"><svg class="ast ast-hero" width="160" height="160"><use href="#ast"/></svg></div>
-  </header>
+    </article>
 
-  <section id="loop">
-    <div class="rule"></div>
-    <p class="label sticky">The loop</p>
-    <div class="cols">
-      <h2 class="r">Acquire, convert, understand, retain, compound.</h2>
-      <p class="lede r">This is the shape of every engagement, whether the deliverable this month is a campaign, a storefront or a tracking fix. Skip a stage and the next one gets more expensive to run.</p>
-    </div>
+    <article class="chapter chapter--empty" data-chapter>
+      <div class="chapter__stage">
+        <div class="chapter__inner">
+          <div class="chapter__frame"></div>
+          <div class="chapter__text">
+            <p class="label">CH. 02</p>
+            <h2 class="display">Still in the fog</h2>
+          </div>
+        </div>
+      </div>
+    </article>
+  </section>
 
-    <div class="loop-diagram r" aria-hidden="true">
-      <svg viewBox="0 0 1200 562" preserveAspectRatio="xMidYMid meet">
-        <path class="loop-path" d="M600,100 L790,238 L718,462 L482,462 L410,238 Z"></path>
-        <g class="loop-node"><circle cx="600" cy="100" r="38"></circle><text x="600" y="100">01</text></g>
-        <g class="loop-node"><circle cx="790" cy="238" r="38"></circle><text x="790" y="238">02</text></g>
-        <g class="loop-node"><circle cx="718" cy="462" r="38"></circle><text x="718" y="462">03</text></g>
-        <g class="loop-node"><circle cx="482" cy="462" r="38"></circle><text x="482" y="462">04</text></g>
-        <g class="loop-node"><circle cx="410" cy="238" r="38"></circle><text x="410" y="238">05</text></g>
-      </svg>
-    </div>
-
-    <div class="stages">
-      <div class="stage r" data-d="0"><span class="idx">01</span><div>
-        <h3>Acquire</h3>
-        <p>Meta and Google, run against a break-even ROAS derived from the margins, not an industry average.</p>
-      </div></div>
-      <div class="stage r" data-d="1"><span class="idx">02</span><div>
-        <h3>Convert</h3>
-        <p>Storefront and checkout built to take the order without friction — catalogue, pricing architecture, guest checkout, payment gateway.</p>
-      </div></div>
-      <div class="stage r" data-d="2"><span class="idx">03</span><div>
-        <h3>Understand</h3>
-        <p>GA4, Tag Manager and Meta Pixel reconciled against the payment gateway, because a Pixel that fires is not the same as a Pixel that is correct.</p>
-      </div></div>
-      <div class="stage r" data-d="3"><span class="idx">04</span><div>
-        <h3>Retain</h3>
-        <p>Post-purchase sequences and pricing that make the second order cheaper to win than the first.</p>
-      </div></div>
-      <div class="stage r" data-d="4"><span class="idx">05</span><div>
-        <h3>Compound</h3>
-        <p>Contribution margin gets reinvested into acquisition, and the same loop runs faster the next time round.</p>
-      </div></div>
+  <section class="plain play" id="play">
+    <header class="plain__head">
+      <p class="label">Play</p>
+      <h2 class="display">No fog here</h2>
+      <p class="body">Tests, studies, things that didn't need a reason.</p>
+    </header>
+    <div class="play__grid">
+      <figure>
+        <img src="media/play/type-test.webp" width="1800" height="1500" loading="lazy" alt="The toxuesure wordmark set in Manrope, Archivo Expanded and Schibsted Grotesk on a fogged background, with avatar tests beside each.">
+        <figcaption class="label">Type test / three grotesques on fog / Archivo Expanded won</figcaption>
+      </figure>
+      <figure>
+        <img src="media/play/cover.webp" width="960" height="588" loading="lazy" alt="Brand cover in two themes: the wordmark with its red-orange dot on fog, and the same on ink, beside a dark block with a dot circled by thin rings.">
+        <figcaption class="label">Brand cover / fog and ink</figcaption>
+      </figure>
     </div>
   </section>
 
-  <section id="work">
-    <div class="rule"></div>
-    <p class="label sticky">Selected work</p>
-
-    <div class="case-head">
-      <h2 class="r">Al&nbsp;Aziz Perfumes</h2>
-      <div class="tags r" data-d="1">
-        <span class="tag">Offline to D2C</span>
-        <span class="tag">16 products</span>
-        <span class="tag">2026</span>
-        <a class="tag link" href="https://alazizparfums.com" target="_blank" rel="noopener">alazizparfums.com &#8599;</a>
-      </div>
-    </div>
-
-    <div class="cols">
-      <div class="shot r" data-d="1">
-        <img src="img/alaziz.webp" width="1200" height="750" loading="lazy" decoding="async"
-             alt="Al Aziz Perfumes storefront homepage, dark ground with the line: The scents you love, honestly made.">
-      </div>
-      <div>
-        <p class="lede r" data-d="2">A single-store perfume retailer in Navi Mumbai with no online presence, selling at &#8377;450 and making &#8377;100 a unit. At that margin his break-even ROAS was 4.5x, which no one reliably hits on cold traffic — the business was not ad-viable before a rupee had been spent. So the first deliverable was not a campaign. It was a price.</p>
-        <p class="muted r" data-d="2">I took the rest of it too: storefront, measurement, acquisition plan, organic social and every creative asset — sole operator, start to finish.</p>
-        <p class="muted r" data-d="3">The positioning came out of the benchmark rather than a brainstorm. Fourteen eau de parfums at one flat price, no inflated MRP, no theatre. In a category built on discounting off an imaginary list price, refusing to play that game is the differentiation.</p>
-      </div>
-    </div>
-
-    <p class="figs-note r">Set at launch from the unit model. These are targets to clear, not outcomes achieved.</p>
-
-    <div class="figs">
-      <div class="fig r" data-d="0"><span class="n"><em>&#8377;799</em></span><span class="k">launch price, set from a GST-corrected unit economics model rather than a competitor glance</span></div>
-      <div class="fig r" data-d="1"><span class="n"><em>55%</em></span><span class="k">contribution margin at that price, rebuilt from 22% at his previous &#8377;450 price</span></div>
-      <div class="fig r" data-d="2"><span class="n"><em>1.83x</em></span><span class="k">break-even ROAS, down from 4.5x — which is what made paid acquisition viable at all</span></div>
-      <div class="fig r" data-d="3"><span class="n"><em>&#8377;1,136</em></span><span class="k">contribution per order on the three-bottle bundle, against the same acquisition cost</span></div>
-    </div>
-
-    <div class="steps-wrap">
-      <div class="steps">
-        <div class="step r"><div class="idx">01</div><div>
-          <h3>Repriced it before writing a single ad</h3>
-          <p>A GST-corrected unit model replaced the &#8377;450 price with a &#8377;799 launch price, moving contribution margin from 22% to 55% and break-even ROAS from 4.5x to 1.83x. Two- and three-bottle bundles lift contribution per order to &#8377;786 and &#8377;1,136 without raising acquisition cost. Everything downstream depended on this being right first.</p>
-        </div></div>
-        <div class="step r"><div class="idx">02</div><div>
-          <h3>Built the storefront</h3>
-          <p>WooCommerce end to end. Sixteen products: fourteen signature eau de parfums, a discovery set, and a new pick-your-inspiration option sold through a dropdown. Pricing architecture, guest checkout and Razorpay integration. Live and taking orders.</p>
-        </div></div>
-        <div class="step r"><div class="idx">03</div><div>
-          <h3>Wired the measurement</h3>
-          <p>GA4, Google Tag Manager and Meta Pixel with Conversions API, both live and sending the same events. Purchase events reconciled against the payment gateway rather than assumed, because a Pixel that fires is not the same as a Pixel that is correct. Event match quality sits at 6.1/10; raising it with more customer parameters is next.</p>
-        </div></div>
-        <div class="step r"><div class="idx">04</div><div>
-          <h3>Benchmarked the category</h3>
-          <p>Four competing fragrance brands compared on price per ml, AOV and positioning. That set the price band and pointed to a craftsman-perfumer story rather than another discount-led entrant.</p>
-        </div></div>
-        <div class="step r"><div class="idx">05</div><div>
-          <h3>Designed the acquisition plan</h3>
-          <p>A &#8377;15,000 per month Meta budget structured against category benchmarks, fronted by a &#8377;599 discovery-set offer with a coupon-driven trial-to-full-bottle funnel.</p>
-        </div></div>
-        <div class="step r"><div class="idx">06</div><div>
-          <h3>Ran the organic side</h3>
-          <p>Full ownership of organic social, warming an audience for a brand starting from no digital presence at all, so the paid account was not the only thing carrying the launch.</p>
-        </div></div>
-        <div class="step r"><div class="idx">07</div><div>
-          <h3>Made every creative asset</h3>
-          <p>Creative strategy and production in-house, using Gemini and Canva. Positioning came out of the benchmark, and the assets were built to carry it rather than decorate it.</p>
-        </div></div>
-        <div class="step r"><div class="idx">08</div><div>
-          <h3>Made a bet on checkout, and the data answered</h3>
-          <p>Launched prepaid-only to avoid roughly &#8377;140 of courier loss on every failed cash-on-delivery order. The first campaign showed the cost of that: people added to cart and then stopped at payment. Next test: a partial-COD option (&#8377;99 upfront) and the shop's 5.0-star offline reviews shown on product pages. A seven-touch WhatsApp sequence is designed for after the first order.</p>
-        </div></div>
-      </div>
-      <div class="work-graphic r" aria-hidden="true"><svg class="ast ast-work" width="160" height="160"><use href="#ast"/></svg></div>
-    </div>
-
-    <div class="note r">
-      <p><strong>First campaign, as promised.</strong> I said the numbers would go here whether or not they flattered me. They don't. &#8377;15,000 of Meta spend produced 116 add-to-carts and 4 orders: a 3.4% cart-to-order rate and roughly &#8377;3,750 per order, against a target of &#8377;550.</p>
-      <p>The ads found demand; checkout lost it. Two causes: no cash-on-delivery option for a brand nobody had heard of, and a 5.0-star offline reputation that wasn't visible anywhere online. Both are being fixed and tested now, and the result goes here too.</p>
-    </div>
-
-    <div class="cta r">
-      <p>If you are hiring, or your store&#8217;s numbers do not reconcile, I am easy to reach.</p>
-      <a class="cta-link" href="mailto:contact@toxuesure.in?subject=D2C%20growth%20enquiry&amp;body=Store%20URL%3A%0A%0AWhat%20looks%20wrong%3A%0A%0AMonthly%20ad%20spend%3A%0A" data-gtm="email">contact@toxuesure.in &#8599;</a>
+  <section class="plain process" id="process">
+    <header class="plain__head">
+      <p class="label">Process</p>
+      <h2 class="display">How CH. 01 was made</h2>
+    </header>
+    <ol class="process__steps">
+      <li><p class="label">01 / Storyboard</p><p class="body">105 frames. Fog, a rack focus at 14 to 28, the dot lands at 40, hold, cut.</p></li>
+      <li><p class="label">02 / Script</p><p class="body">Python builds the scene in Blender. Every timing is a parameter at the top.</p></li>
+      <li><p class="label">03 / Check frames</p><p class="body">Single frames rendered and looked at before anything else. The focus was snapping too early. Fixed.</p></li>
+      <li><p class="label">04 / Render</p><p class="body">Eevee, Standard view transform so the colours stay exact. Ctrl+F12.</p></li>
+    </ol>
+    <div class="process__strip">
+      <figure><img src="media/process/f000.webp" width="960" height="540" loading="lazy" alt="Frame 0: only fog, the wordmark a faint blur."><figcaption class="label">F 000</figcaption></figure>
+      <figure><img src="media/process/f020.webp" width="960" height="540" loading="lazy" alt="Frame 20: the wordmark half out of the fog."><figcaption class="label">F 020</figcaption></figure>
+      <figure><img src="media/process/f028.webp" width="960" height="540" loading="lazy" alt="Frame 28: the wordmark sharp."><figcaption class="label">F 028</figcaption></figure>
+      <figure><img src="media/process/f037.webp" width="960" height="540" loading="lazy" alt="Frame 37: the dot dropping onto the baseline."><figcaption class="label">F 037</figcaption></figure>
+      <figure><img src="media/process/f060.webp" width="960" height="540" loading="lazy" alt="Frame 60: the wordmark and the dot, holding."><figcaption class="label">F 060</figcaption></figure>
     </div>
   </section>
 
-  <section id="built">
-    <div class="rule"></div>
-    <p class="label sticky">Built</p>
-    <div class="cols">
-      <div class="lead">
-        <h2 class="r">Tools I build with Claude and Python.</h2>
-      </div>
-      <div class="stack">
-        <div class="item r" data-d="1">
-          <h3>Review analyser</h3>
-          <p>Reads hundreds of app reviews and ranks what customers complain about, with a quote as evidence for each label. Claude returns structured JSON, Python checks every answer against the source text, and a hand-labelled sample measures how often the model is right. Built on The Souled Store's public Play Store reviews.</p>
-          <p><a class="u" href="https://github.com/Ani25x/review-analyser" target="_blank" rel="noopener" data-gtm="github">github.com/Ani25x/review-analyser &#8599;</a></p>
-        </div>
-        <div class="item r" data-d="2">
-          <h3>Product feeds and unit economics for Al Aziz</h3>
-          <p>One product sheet generates both the Google Merchant Center and Meta catalog feeds, with custom labels for hero products and margin tier, and flags anything likely to be disapproved before upload. A second script gives break-even ROAS per product and per offer, and checks the live campaign against its targets.</p>
-          <p><a class="u" href="https://github.com/Ani25x/alaziz-martech" target="_blank" rel="noopener" data-gtm="github">github.com/Ani25x/alaziz-martech &#8599;</a></p>
-        </div>
-        <div class="item r" data-d="3">
-          <h3>AI product photography</h3>
-          <p>A tested prompt system (Claude writes the prompts, Gemini renders them) that produced the whole Al Aziz catalogue and its social content without a photoshoot. The formula fixes the things that make AI product shots look fake: bottle scale, light direction, prop depth.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="services">
-    <div class="rule"></div>
-    <p class="label sticky">What I do</p>
-    <div class="cols">
-      <div class="lead">
-        <h2 class="r">Six things, and one person doing all of them.</h2>
-      </div>
-      <div class="stack">
-        <div class="item r" data-d="1">
-          <h3>Ecommerce tracking and analytics</h3>
-          <p>GA4, Google Tag Manager, Meta Pixel with Conversions API. Purchase events, revenue values, deduplication, and a reconciliation against what the payment gateway actually recorded.</p>
-        </div>
-        <div class="item r" data-d="2">
-          <h3>Store builds</h3>
-          <p>WooCommerce and WordPress, front and back. Catalogue, pricing, checkout flow, payment gateway, and the logistics decisions that quietly determine whether the unit economics survive contact with reality.</p>
-        </div>
-        <div class="item r" data-d="3">
-          <h3>Paid acquisition</h3>
-          <p>Meta and Google. Campaign structure, creative testing, budget allocation and offer construction, run against a break-even ROAS derived from your margins rather than an industry average.</p>
-        </div>
-        <div class="item r" data-d="4">
-          <h3>Organic social</h3>
-          <p>Day-to-day ownership of the organic account. For a brand with no digital presence, this is what stops the paid account from being the only thing carrying the launch.</p>
-        </div>
-        <div class="item r" data-d="5">
-          <h3>Creative strategy and production</h3>
-          <p>Positioning, offer and every asset, produced in-house with Gemini and Canva. Creative built to carry a position that came out of a benchmark rather than a brainstorm.</p>
-        </div>
-        <div class="item r" data-d="6">
-          <h3>Unit economics and reporting</h3>
-          <p>CAC, AOV, contribution margin, break-even ROAS, and a Power BI or GA4 view a founder can read in ninety seconds without a translator.</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="tools r">
-      <p class="tools-label">Tools I work in</p>
-      <ul>
-        <li>GA4</li>
-        <li>Google Tag Manager</li>
-        <li>Meta Pixel &amp; Conversions API</li>
-        <li>Meta Ads</li>
-        <li>Google Ads</li>
-        <li>WooCommerce</li>
-        <li>WordPress</li>
-        <li>Razorpay</li>
-        <li>Google Merchant Center</li>
-        <li>Python (Pandas)</li>
-        <li>SQL</li>
-        <li>Claude API</li>
-        <li>Power BI</li>
-        <li>Canva</li>
-        <li>Gemini</li>
+  <section class="plain about" id="about">
+    <p class="label">About</p>
+    <p class="about__text">I'm Aniket. I make things move. toxuesure is a word with no meaning, so it means whatever I think. Everything here starts in fog.</p>
+    <div class="about__contact">
+      <a class="about__mail" href="mailto:toxuesure@gmail.com" data-gtm="email">toxuesure@gmail.com</a>
+      <ul class="about__links label">
+        <li><a href="https://www.youtube.com/@toxuesure" rel="me">YouTube</a></li>
+        <li><a href="https://www.instagram.com/toxuesure/" rel="me">Instagram</a></li>
+        <li><a href="https://x.com/toxuesure" rel="me">X</a></li>
+        <li><a href="https://medium.com/@toxuesure" rel="me">Medium</a></li>
+        <li><a href="https://www.linkedin.com/in/pattebahaduraniket/" rel="me">LinkedIn</a></li>
       </ul>
     </div>
+    <p class="about__foot label">© 2026 <span>toxuesure.</span></p>
   </section>
+</main>
 
-  <section id="approach">
-    <div class="rule"></div>
-    <p class="label sticky">How I work</p>
-    <div class="cols">
-      <div class="lead">
-        <h2 class="r">Fix the data. Then scale the spend.</h2>
-        <div class="approach-graphic r" aria-hidden="true"><svg class="ast ast-approach" width="160" height="160"><use href="#ast"/></svg></div>
-      </div>
-      <div class="stack">
-        <div class="item r" data-d="1">
-          <p class="lede">The order matters. Spend optimising toward broken events does not merely waste budget, it teaches the algorithm the wrong lesson and the damage compounds. So measurement gets fixed first, every time, including the engagements where it is the least interesting part of the work.</p>
-        </div>
-        <div class="item r" data-d="2">
-          <p class="muted">I came to this from sales rather than from design, which means I think in contribution margin before I think in creative. I would rather show you a pricing model than a mood board. If the number does not move, it was decoration.</p>
-        </div>
-        <div class="item r" data-d="3">
-          <p class="muted">I work with a small number of brands at a time and I document what I learn in public, including the parts that did not work. There is a great deal of confident nonsense in this field and most of it is generated rather than earned.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="contact" class="contact">
-    <div class="rule"></div>
-    <p class="label">Contact</p>
-    <div class="contact-grid">
-      <div class="contact-copy">
-        <a class="big r" href="mailto:contact@toxuesure.in" data-gtm="email">contact@toxuesure.in</a>
-        <div class="meta r" data-d="2">
-          <span>Navi Mumbai, India</span>
-          <a href="https://www.linkedin.com/in/pattebahaduraniket/" target="_blank" rel="noopener" data-gtm="linkedin">LinkedIn</a>
-          <a href="https://github.com/Ani25x" target="_blank" rel="noopener" data-gtm="github">GitHub</a>
-        </div>
-      </div>
-      <div class="contact-graphic r" aria-hidden="true"><svg class="ast ast-contact" width="160" height="160"><use href="#ast"/></svg></div>
-    </div>
-  </section>
-
-  <footer>
-    <span>Toxuesure &middot; Aniket Pattebahadur</span>
-    <span>Navi Mumbai</span>
-  </footer>
-
-</div>
-<script src="gsap/gsap.min.js"></script>
-<script src="gsap/ScrollTrigger.min.js"></script>
-<script src="main.js?v=15" defer></script>
+<script src="js/measure.js" defer></script>
+<script type="module" src="js/main.js"></script>
 </body>
 </html>

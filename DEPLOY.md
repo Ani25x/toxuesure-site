@@ -1,98 +1,45 @@
 # toxuesure.in — deploy notes
 
-## 1. Upload
+## Upload to Hostinger
 
-Hostinger → hPanel → File Manager → `public_html`
-
-Upload the contents of this folder (not the folder itself):
+hPanel → File Manager → `public_html`. Delete the old site's files first
+(`styles.css`, `main.js`, `gsap/`, `img/`, old `fonts/open-sauce-*`), then upload the
+contents of this repo (not the folder itself):
 
 ```
-index.html
-styles.css
-main.js
-fonts/    (5 woff2 files)
-img/      (alaziz.webp, og.png)
-gsap/     (gsap.min.js, ScrollTrigger.min.js)
+index.html  robots.txt  sitemap.xml
+css/      site.css
+js/       main.js (fog, lens, chapters), measure.js (dataLayer events)
+vendor/   three/three.module.js, three/three.core.js (Three.js r187)
+fonts/    Archivo Expanded ExtraBold, Archivo Regular, IBM Plex Mono (woff2)
+media/    intro.mp4, intro.jpg, og.jpg, favicon.svg, play/, process/
 ```
 
-Delete any Hostinger placeholder `index.html` / `default.php` first.
-Do **not** upload `.git/` or `.gitignore` — those are for version control,
-not the live site.
+Don't upload `.git/`, `.gitignore` or this file.
 
-## 2. Before it goes live
+## How it works
 
-**a. GTM container ID.** Already set to `GTM-TCVJGQFV` in both places
-(the `<head>` script and the `<noscript>` iframe). Nothing to change.
+- No build step. Plain HTML + CSS + one ES module. Three.js is self-hosted and loaded
+  through an import map.
+- One fixed WebGL canvas draws the fog: everything behind it (hidden hero lines,
+  chapter video) is blurred at 1/6 resolution, veiled at 72% fog, with a slow drifting
+  noise. A lens follows the cursor (press-and-hold on touch) and shows it sharp.
+- Chapters clear as they reach the middle of the screen. The `<video>` in each chapter
+  feeds the WebGL texture; without WebGL it shows with a CSS fog instead.
+- Phones render at 1.5x max; the canvas stops drawing once you scroll past Work.
+- Brand system: fog #E9E9E6, ink #0A0A0A, dot #ED3B03, Archivo Expanded 800 / Archivo
+  400 / IBM Plex Mono. Motion: cubic ease-out, no bounce, the dot lands last.
 
-**b. Email.** Create `aniketpattebahadur@toxuesure.in` in Hostinger → Emails
-*before* launch. The address is already on the page; it just needs to exist.
+## Adding a chapter
 
-**c. HTTPS.** Hostinger → SSL → issue the free certificate, and force HTTPS.
+Copy an `<article class="chapter" data-chapter>` block in `index.html`, point its
+`<video>` at a new file in `media/` (H.264 MP4, 1080p, `-movflags +faststart`), give it
+a poster jpg, and change the label, title and one line. Nothing else changes.
 
-## 3. GTM + GA4 setup
+## Tracking (GTM-TCVJGQFV)
 
-Container is `Web`. Inside it:
-
-**Tags**
-- GA4 Configuration → your Measurement ID → trigger: All Pages
-- GA4 Event `outbound_click` → trigger: Custom Event `outbound_click`
-- GA4 Event `contact_click` → trigger: Custom Event `contact_click`
-- GA4 Event `section_view` → trigger: Custom Event `section_view`
-- GA4 Event `scroll_depth` → trigger: Custom Event `scroll_depth`
-
-**Data Layer Variables to create** (names must match exactly):
-`link_domain`, `link_url`, `link_id`, `method`, `section_id`, `percent_scrolled`
-
-The page pushes these into `dataLayer` already — `main.js` handles it. GTM owns
-the tag configuration, the page owns nothing but the events. That separation is
-the point, and it is what you would tell a client to do.
-
-**Verify in Preview mode**, not by assuming:
-- `page_view` fires exactly once, not twice
-- `contact_click` fires when the email link is clicked
-- `outbound_click` fires on the alazizparfums.com link with the right `link_domain`
-- `scroll_depth` fires at 25/50/75/100 and each only once
-
-Then register `outbound_click`, `contact_click`, `section_view`, `scroll_depth`
-as Key Events in GA4 if you want them counted as conversions.
-
-## 4. Also worth doing
-
-- Google Search Console: verify the property, submit the URL.
-- Check the OG card renders: paste `https://toxuesure.in/` into LinkedIn's
-  Post Inspector.
-- Add the URL to your LinkedIn profile (Contact info → Website).
-
-## 5. Version control (GitHub)
-
-This folder is already a git repo (`git log` shows one commit). I couldn't
-push it from here — this sandbox has no network path to github.com — so to
-get it onto GitHub:
-
-1. Create an empty repo on github.com (no README, no .gitignore — this
-   folder already has both).
-2. On your own machine, `cd` into this folder and run:
-   ```
-   git remote add origin https://github.com/<you>/<repo>.git
-   git push -u origin master
-   ```
-
-From then on, deploy by pushing to GitHub and either uploading the changed
-files to Hostinger by hand, or connecting the repo to a host that deploys
-from git directly (Cloudflare Pages, Netlify, Vercel all do this on their
-free tiers) if you want to drop the manual Hostinger upload step later.
-
-## Notes on how this is built
-
-No framework, no build step, no dependencies. Fonts are self-hosted, so
-there is no third-party request blocking first paint. Images are WebP and
-lazy-loaded below the fold.
-
-Motion runs on GSAP + ScrollTrigger (self-hosted in `gsap/`, ~115KB total,
-loaded after the content so it never blocks first paint) and is fully
-disabled under `prefers-reduced-motion` — see the top of `main.js`. Nothing
-moves to impress; it moves to sequence attention.
-
-If you later add a second case study page, copy `index.html`, keep the same
-`styles.css` and `main.js`, and change only the content between the
-`<section>` tags.
+`js/measure.js` pushes the same events and variables as the old site, so existing GTM
+triggers keep working: `contact_click`, `outbound_click`, `section_view`
+(hero, work, play, process, about), `scroll_depth`. New: `lens_open` (method:
+`pointer` or `touch`), the first time a visitor opens the fog lens. Add a Custom Event
+trigger and a GA4 event tag for it in GTM if you want it counted.
